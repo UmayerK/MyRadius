@@ -47,9 +47,12 @@ const WorkCalc = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen w-full p-4 mt-10 " style={{ fontFamily: 'sans-serif' }}>
-      <button onClick={() => setTab('give')} className="mt-4 text-white font-bold py-2 px-4 bg-blue-500">Give Work</button>
-      <button onClick={() => setTab('accept')} className="mt-4 text-white font-bold py-2 px-4 bg-green-500">Accept Work</button>
+    <div className="flex flex-col items-center justify-start min-h-screen w-full p-4 mt-10" style={{ fontFamily: 'sans-serif' }}>
+      <div className="flex space-x-4 mb-4">
+        <button onClick={() => setTab('give')} className={`mt-4 text-white font-bold py-2 px-4 ${tab === 'give' ? 'bg-blue-700' : 'bg-blue-500'}`}>Give Work</button>
+        <button onClick={() => setTab('accept')} className={`mt-4 text-white font-bold py-2 px-4 ${tab === 'accept' ? 'bg-green-700' : 'bg-green-500'}`}>Accept Work</button>
+        <button onClick={() => setTab('history')} className={`mt-4 text-white font-bold py-2 px-4 ${tab === 'history' ? 'bg-gray-700' : 'bg-gray-500'}`}>History</button>
+      </div>
 
       {error && <p className="text-red-500">{error}</p>}
 
@@ -83,6 +86,21 @@ const WorkCalc = () => {
               <p>Urgency: {workItem.urgency}</p>
               <p>Status: {workItem.completed ? 'Completed' : 'Pending'}</p>
               <button onClick={() => handleAcceptSubmit(index)} className="text-white font-bold py-2 px-4 bg-green-500">{workItem.completed ? 'Undo' : 'Complete'}</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'history' && (
+        <div className="flex flex-col space-y-3 mt-10 items-center">
+          {work.filter(workItem => workItem.completed).map((workItem, index) => (
+            <div key={index} className="w-full p-2 border border-gray-300">
+              <p>Name: {workItem.name}</p>
+              <p>Price: {workItem.price}</p>
+              <p>Weight: {workItem.weight}</p>
+              <p>Quantity: {workItem.quantity}</p>
+              <p>Urgency: {workItem.urgency}</p>
+              <p>Status: Completed</p>
             </div>
           ))}
         </div>
