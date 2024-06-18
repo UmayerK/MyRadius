@@ -169,3 +169,5 @@ Each component is designed to communicate efficiently with relevant parts of the
 For instance, when a client places an order through the UI, the OMS processes this order by interfacing with the Pricing Engine to determine the cost and then stores the order details in the Database.
 Meanwhile, the Authentication Service continuously ensures that all interactions are secure and that only authorized users access data or perform actions.
 The Notification System keeps all stakeholders updated, enhancing the system's responsiveness and user engagement.
+
+mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/
