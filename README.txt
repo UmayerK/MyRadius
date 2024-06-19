@@ -171,3 +171,5 @@ Meanwhile, the Authentication Service continuously ensures that all interactions
 The Notification System keeps all stakeholders updated, enhancing the system's responsiveness and user engagement.
 
 mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/
+
+.\venv\Scripts\activate
