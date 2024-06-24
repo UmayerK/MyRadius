@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const WorkCalc = () => {
   const [tab, setTab] = useState('give');
   const [work, setWork] = useState([]);
-  const [newWork, setNewWork] = useState({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false });
+  const [newWork, setNewWork] = useState({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending' });
   const [paletteSize, setPaletteSize] = useState(1);
   const [priceIncrement, setPriceIncrement] = useState(1);
   const [paletteCount, setPaletteCount] = useState(0);
@@ -20,7 +20,7 @@ const WorkCalc = () => {
     e.preventDefault();
     if (error === '') {
       setWork([...work, newWork]);
-      setNewWork(prevWork => ({ ...prevWork, price: prevWork.price * priceIncrement }));
+      setNewWork({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending' });
       setPaletteCount(prevCount => prevCount + 1);
     }
   };
@@ -28,6 +28,19 @@ const WorkCalc = () => {
   const handleAcceptSubmit = (index) => {
     const newWorkList = [...work];
     newWorkList[index].completed = !newWorkList[index].completed;
+    newWorkList[index].status = newWorkList[index].completed ? 'Completed' : 'Pending';
+    setWork(newWorkList);
+  };
+
+  const handleRejectSubmit = (index) => {
+    const newWorkList = [...work];
+    newWorkList[index].status = 'Rejected';
+    setWork(newWorkList);
+  };
+
+  const handleWaitlistSubmit = (index) => {
+    const newWorkList = [...work];
+    newWorkList[index].status = 'Waitlisted';
     setWork(newWorkList);
   };
 
@@ -84,8 +97,12 @@ const WorkCalc = () => {
               <p>Weight: {workItem.weight}</p>
               <p>Quantity: {workItem.quantity}</p>
               <p>Urgency: {workItem.urgency}</p>
-              <p>Status: {workItem.completed ? 'Completed' : 'Pending'}</p>
-              <button onClick={() => handleAcceptSubmit(index)} className="text-white font-bold py-2 px-4 bg-green-500">{workItem.completed ? 'Undo' : 'Complete'}</button>
+              <p>Status: {workItem.status}</p>
+              <div className="flex space-x-2">
+                <button onClick={() => handleAcceptSubmit(index)} className="text-white font-bold py-2 px-4 bg-green-500">{workItem.completed ? 'Undo' : 'Complete'}</button>
+                <button onClick={() => handleRejectSubmit(index)} className="text-white font-bold py-2 px-4 bg-red-500">Reject</button>
+                <button onClick={() => handleWaitlistSubmit(index)} className="text-white font-bold py-2 px-4 bg-gray-500">Waitlist</button>
+              </div>
             </div>
           ))}
         </div>
@@ -98,7 +115,7 @@ const WorkCalc = () => {
               <p>Name: {workItem.name}</p>
               <p>Price: {workItem.price}</p>
               <p>Weight: {workItem.weight}</p>
-              <p>Quantity: {workItem.quantity}</p>
+             <p>Quantity: {workItem.quantity}</p>
               <p>Urgency: {workItem.urgency}</p>
               <p>Status: Completed</p>
             </div>
