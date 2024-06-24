@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const WorkCalc = () => {
   const [tab, setTab] = useState('give');
@@ -15,6 +16,18 @@ const WorkCalc = () => {
       setNewWork(prevWork => ({ ...prevWork, price: '' }));
     }
   }, [paletteCount, paletteSize]);
+
+  useEffect(() => {
+    if (tab === 'accept') {
+      axios.get('http://localhost:5000/api/orders')
+        .then(response => {
+          setWork(response.data);
+        })
+        .catch(error => {
+          console.error("There was an error fetching the orders!", error);
+        });
+    }
+  }, [tab]);
 
   const handleGiveSubmit = (e) => {
     e.preventDefault();
@@ -115,7 +128,7 @@ const WorkCalc = () => {
               <p>Name: {workItem.name}</p>
               <p>Price: {workItem.price}</p>
               <p>Weight: {workItem.weight}</p>
-             <p>Quantity: {workItem.quantity}</p>
+              <p>Quantity: {workItem.quantity}</p>
               <p>Urgency: {workItem.urgency}</p>
               <p>Status: Completed</p>
             </div>
