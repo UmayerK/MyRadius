@@ -32,7 +32,7 @@ const WorkCalc = () => {
     if (tab === 'history') {
       axios.get('http://localhost:3000/api/orders')
         .then(response => {
-          setHistory(response.data.filter(order => order.verdict === 0));
+          setHistory(response.data); // Fetch all orders for history tab
         })
         .catch(error => {
           console.error("There was an error fetching the history!", error);
@@ -45,7 +45,6 @@ const WorkCalc = () => {
     if (error === '') {
       axios.post('http://localhost:3000/api/orders', newWork)
         .then(response => {
-          console.log("Order added!", response.data);
           setWork([...work, { ...newWork, verdict: 2 }]); // Add to state with 'verdict' set to 2 (on waitlist)
           setNewWork({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending', verdict: 2 });
           setPaletteCount(prevCount => prevCount + 1);
