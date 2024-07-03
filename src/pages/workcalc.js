@@ -4,7 +4,8 @@ import axios from 'axios';
 const WorkCalc = () => {
   const [tab, setTab] = useState('give');
   const [work, setWork] = useState([]);
-  const [newWork, setNewWork] = useState({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending' });
+  const [history, setHistory] = useState([]);
+  const [newWork, setNewWork] = useState({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending', verdict: 2 });
   const [paletteSize, setPaletteSize] = useState(1);
   const [priceIncrement, setPriceIncrement] = useState(1);
   const [paletteCount, setPaletteCount] = useState(0);
@@ -19,7 +20,7 @@ const WorkCalc = () => {
 
   useEffect(() => {
     if (tab === 'accept') {
-      axios.get('http://localhost:5000/api/orders')
+      axios.get('http://localhost:3000/api/orders')
         .then(response => {
           setWork(response.data);
         })
@@ -27,14 +28,31 @@ const WorkCalc = () => {
           console.error("There was an error fetching the orders!", error);
         });
     }
+
+    if (tab === 'history') {
+      axios.get('http://localhost:3000/api/orders')
+        .then(response => {
+          setHistory(response.data.filter(order => order.verdict === 0));
+        })
+        .catch(error => {
+          console.error("There was an error fetching the history!", error);
+        });
+    }
   }, [tab]);
 
   const handleGiveSubmit = (e) => {
     e.preventDefault();
     if (error === '') {
-      setWork([...work, newWork]);
-      setNewWork({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending' });
-      setPaletteCount(prevCount => prevCount + 1);
+      axios.post('http://localhost:3000/api/orders', newWork)
+        .then(response => {
+          console.log("Order added!", response.data);
+          setWork([...work, { ...newWork, verdict: 2 }]); // Add to state with 'verdict' set to 2 (on waitlist)
+          setNewWork({ price: '', weight: '', name: '', quantity: '', urgency: '', completed: false, status: 'Pending', verdict: 2 });
+          setPaletteCount(prevCount => prevCount + 1);
+        })
+        .catch(error => {
+          console.error("There was an error adding the order!", error);
+        });
     }
   };
 
@@ -48,12 +66,14 @@ const WorkCalc = () => {
   const handleRejectSubmit = (index) => {
     const newWorkList = [...work];
     newWorkList[index].status = 'Rejected';
+    newWorkList[index].verdict = 1;
     setWork(newWorkList);
   };
 
   const handleWaitlistSubmit = (index) => {
     const newWorkList = [...work];
     newWorkList[index].status = 'Waitlisted';
+    newWorkList[index].verdict = 2;
     setWork(newWorkList);
   };
 
@@ -123,14 +143,14 @@ const WorkCalc = () => {
 
       {tab === 'history' && (
         <div className="flex flex-col space-y-3 mt-10 items-center text-white">
-          {work.filter(workItem => workItem.completed).map((workItem, index) => (
+          {history.map((workItem, index) => (
             <div key={index} className="w-full p-2 border border-gray-300">
               <p>Name: {workItem.name}</p>
               <p>Price: {workItem.price}</p>
               <p>Weight: {workItem.weight}</p>
               <p>Quantity: {workItem.quantity}</p>
               <p>Urgency: {workItem.urgency}</p>
-              <p>Status: Completed</p>
+              <p>Status: {workItem.verdict === 0 ? 'Completed' : workItem.verdict === 1 ? 'Rejected' : 'Waitlisted'}</p>
             </div>
           ))}
         </div>
