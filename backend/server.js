@@ -1,7 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const model = require('./Actual_Collection');
+const orderModel = require('./Actual_Collection');
+const userModel = require('./userModel'); // Assuming user model is defined in userModel.js
 
 const app = express();
 app.use(cors());
@@ -12,16 +13,41 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   useUnifiedTopology: true,
 });
 
+// Endpoint to get all orders
 app.get('/api/orders', (req, res) => {
-  model.find()
+  orderModel.find()
     .then(orders => res.json(orders))
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
+// Endpoint to create a new order
 app.post('/api/orders', (req, res) => {
-  const newOrder = new model(req.body);
+  const newOrder = new orderModel(req.body);
   newOrder.save()
     .then(() => res.json('Order added!'))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to register a new user
+app.post('/api/register', (req, res) => {
+  const { email, password, username } = req.body;
+  const newUser = new userModel({ email, password, username });
+  newUser.save()
+    .then(() => res.json({ success: true }))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to login a user
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
+  userModel.findOne({ email, password })
+    .then(user => {
+      if (user) {
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ success: false });
+      }
+    })
     .catch(err => res.status(400).json('Error: ' + err));
 });
 

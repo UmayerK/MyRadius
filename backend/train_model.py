@@ -19,7 +19,6 @@ for i in range(settings["epochs"]):
 
     # Evaluate loss every 100 steps
     if i % 100 == 0:
-        average_loss /= 100
         print(f"Epoch {i}: loss={average_loss}")
         average_loss = 0
 
