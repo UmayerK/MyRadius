@@ -32,6 +32,7 @@ app.post('/api/orders', (req, res) => {
 app.post('/api/register', (req, res) => {
   const { email, password, username } = req.body;
   const newUser = new userModel({ email, password, username });
+
   newUser.save()
     .then(() => res.json({ success: true }))
     .catch(err => res.status(400).json('Error: ' + err));
