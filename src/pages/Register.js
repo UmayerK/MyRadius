@@ -1,49 +1,41 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../AuthContext'; // Ensure this path is correct
 
 const Register = () => {
     const [activeTab, setActiveTab] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const { login } = useAuth();  // Get login function from context
 
     const handleRegister = async () => {
-        console.log('Register button clicked');
-        console.log('Email:', email);
-        console.log('Password:', password);
-        console.log('Name:', name);
         try {
             const response = await axios.post('http://localhost:3000/api/register', {
                 email,
                 password,
                 username: name
             });
-            console.log('Response:', response.data);
             alert('Registration completed');
         } catch (error) {
-            console.error('Error:', error);
             alert('Registration failed');
         }
     };
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        console.log('Login button clicked');
-        console.log('Email:', email);
-        console.log('Password:', password);
         try {
             const response = await axios.post('http://localhost:3000/api/login', {
                 email,
                 password
             });
-            console.log('Response:', response.data);
             if (response.data.success) {
+                login(response.data.userId);  // Call login function on successful login
                 alert('Login successful');
             } else {
                 alert('Login failed');
             }
         } catch (error) {
-            console.error('Error:', error);
             alert('Login failed');
         }
     };
