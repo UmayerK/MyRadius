@@ -3,7 +3,7 @@ import Pricing from "./pages/workcalc";
 import Home from "./pages/Home";
 import Register from "./pages/Register";
 import { Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./AuthContext"; // Ensure this path is correct
+import { AuthProvider } from "./AuthContext"; 
 import "tailwindcss/tailwind.css";
 
 function App() {

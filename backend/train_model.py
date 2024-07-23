@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from model import WorkAcceptanceModel, fetch_data_and_convert_to_tensor
-from data_loader import load_data_from_mongodb
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 

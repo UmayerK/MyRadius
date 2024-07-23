@@ -1,7 +1,7 @@
 import torch
 from pymongo import MongoClient
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as Fpip 
 
 
 #Settings for the model that include batch size how much and how fast it learns 
@@ -72,7 +72,7 @@ def preprocess(batches):
 class WorkAcceptanceModel(nn.Module):
     def __init__(self):
         """Model definition"""
-        super(Mymodel, self).__init__()
+        super(model, self).__init__() #### Error here 
         self.fc1 = nn.Linear(5, 16)            # Input layer
         self.batchnorm1 = nn.BatchNorm1d(16)    # Batch normalization layer
         self.dropout1 = nn.Dropout(0.2)         # Dropout layer to prevent overfitting

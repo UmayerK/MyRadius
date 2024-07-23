@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const orderModel = require('./Actual_Collection');
+const orderModel = require('./Actual_Collection'); // Ensure correct path to the model file
 const userModel = require('./userModel'); // Assuming user model is defined in userModel.js
 
 const app = express();
@@ -11,6 +11,10 @@ app.use(express.json());
 mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_DATABASE_NAME', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+}).then(() => {
+  console.log('Connected to MongoDB');
+}).catch((err) => {
+  console.error('Error connecting to MongoDB', err);
 });
 
 // Endpoint to get all orders
