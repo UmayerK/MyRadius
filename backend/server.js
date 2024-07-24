@@ -48,11 +48,21 @@ app.post('/api/login', (req, res) => {
   userModel.findOne({ email, password })
     .then(user => {
       if (user) {
-        res.json({ success: true });
+        res.json({ success: true, userId: user._id });
       } else {
         res.status(400).json({ success: false });
       }
     })
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to update user information
+app.put('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  const updatedData = req.body;
+
+  userModel.findByIdAndUpdate(userId, updatedData, { new: true })
+    .then(updatedUser => res.json(updatedUser))
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
