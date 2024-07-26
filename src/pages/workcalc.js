@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../AuthContext'; // Ensure correct path to AuthContext
 
 const WorkCalc = () => {
   const [tab, setTab] = useState('give');
@@ -78,6 +79,7 @@ const WorkCalc = () => {
   const [paletteCount, setPaletteCount] = useState(0);
   const [error, setError] = useState('');
   const [expandedIndex, setExpandedIndex] = useState(null); // Track expanded order
+  const { isLoggedIn } = useAuth(); // Get login status from context
 
   useEffect(() => {
     if (paletteCount >= paletteSize) {
@@ -87,26 +89,28 @@ const WorkCalc = () => {
   }, [paletteCount, paletteSize]);
 
   useEffect(() => {
-    if (tab === 'accept') {
-      axios.get('http://localhost:3000/api/orders')
-        .then(response => {
-          setWork(response.data);
-        })
-        .catch(error => {
-          console.error("There was an error fetching the orders!", error);
-        });
-    }
+    if (isLoggedIn) {
+      if (tab === 'accept') {
+        axios.get('http://localhost:3000/api/orders')
+          .then(response => {
+            setWork(response.data);
+          })
+          .catch(error => {
+            console.error("There was an error fetching the orders!", error);
+          });
+      }
 
-    if (tab === 'history') {
-      axios.get('http://localhost:3000/api/orders')
-        .then(response => {
-          setHistory(response.data); // Fetch all orders for history tab
-        })
-        .catch(error => {
-          console.error("There was an error fetching the history!", error);
-        });
+      if (tab === 'history') {
+        axios.get('http://localhost:3000/api/orders')
+          .then(response => {
+            setHistory(response.data); // Fetch all orders for history tab
+          })
+          .catch(error => {
+            console.error("There was an error fetching the history!", error);
+          });
+      }
     }
-  }, [tab]);
+  }, [tab, isLoggedIn]);
 
   const handleGiveSubmit = (e) => {
     e.preventDefault();
@@ -327,92 +331,100 @@ const WorkCalc = () => {
 
       {tab === 'accept' && (
         <div className="flex flex-col space-y-3 mt-10 items-center text-white">
-          {work.map((workItem, index) => (
-            <div key={index} className="w-full p-2 border border-gray-300">
-              <p>Name: {workItem.name}</p>
-              <p>Quantity: {workItem.quantity}</p>
-              <p>Verdict: {workItem.verdict}</p>
-              <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
-              {expandedIndex === index && (
-                <>
-                  <p>Merchant ID: {workItem.merchantId}</p>
-                  <p>Profile ID: {workItem.profileId}</p>
-                  <p>Merchant Order ID: {workItem.merchantOrderId}</p>
-                  <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
-                  <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
-                  <p>Language ID: {workItem.languageId}</p>
-                  <p>Placed By: {workItem.placedBy}</p>
-                  <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
-                  <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
-                  <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
-                  <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
-                  <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                  <p>Fulfiller ID: {workItem.fulfillerId}</p>
-                  <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
-                  <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
-                  <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
-                  <p>Shipping Priority: {workItem.shippingPriority}</p>
-                  <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
-                  <p>Merchant Product Name: {workItem.merchantProductName}</p>
-                  <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
-                  <p>Price: {workItem.price}</p>
-                  <p>Weight: {workItem.weight}</p>
-                  <p>Urgency: {workItem.urgency}</p>
-                  <p>Status: {workItem.status}</p>
-                  <p>Pallet Fullness: {workItem.pallet_fullness}</p>
-                </>
-              )}
-              <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
-              <div className="flex space-x-2">
-                <button onClick={() => handleAcceptSubmit(index)} className="text-white font-bold py-2 px-4 bg-green-500">{workItem.completed ? 'Undo' : 'Complete'}</button>
-                <button onClick={() => handleRejectSubmit(index)} className="text-white font-bold py-2 px-4 bg-red-500">Reject</button>
-                <button onClick={() => handleWaitlistSubmit(index)} className="text-white font-bold py-2 px-4 bg-gray-500">Waitlist</button>
+          {isLoggedIn ? (
+            work.map((workItem, index) => (
+              <div key={index} className="w-full p-2 border border-gray-300">
+                <p>Name: {workItem.name}</p>
+                <p>Quantity: {workItem.quantity}</p>
+                <p>Verdict: {workItem.verdict}</p>
+                <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
+                {expandedIndex === index && (
+                  <>
+                    <p>Merchant ID: {workItem.merchantId}</p>
+                    <p>Profile ID: {workItem.profileId}</p>
+                    <p>Merchant Order ID: {workItem.merchantOrderId}</p>
+                    <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
+                    <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
+                    <p>Language ID: {workItem.languageId}</p>
+                    <p>Placed By: {workItem.placedBy}</p>
+                    <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
+                    <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
+                    <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
+                    <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
+                    <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
+                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
+                    <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
+                    <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
+                    <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
+                    <p>Shipping Priority: {workItem.shippingPriority}</p>
+                    <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
+                    <p>Merchant Product Name: {workItem.merchantProductName}</p>
+                    <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
+                    <p>Price: {workItem.price}</p>
+                    <p>Weight: {workItem.weight}</p>
+                    <p>Urgency: {workItem.urgency}</p>
+                    <p>Status: {workItem.status}</p>
+                    <p>Pallet Fullness: {workItem.pallet_fullness}</p>
+                  </>
+                )}
+                <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAcceptSubmit(index)} className="text-white font-bold py-2 px-4 bg-green-500">{workItem.completed ? 'Undo' : 'Complete'}</button>
+                  <button onClick={() => handleRejectSubmit(index)} className="text-white font-bold py-2 px-4 bg-red-500">Reject</button>
+                  <button onClick={() => handleWaitlistSubmit(index)} className="text-white font-bold py-2 px-4 bg-gray-500">Waitlist</button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p>Please log in to view and accept work.</p>
+          )}
         </div>
       )}
 
       {tab === 'history' && (
         <div className="flex flex-col space-y-3 mt-10 items-center text-white">
-          {history.map((workItem, index) => (
-            <div key={index} className="w-full p-2 border border-gray-300">
-              <p>Name: {workItem.name}</p>
-              <p>Quantity: {workItem.quantity}</p>
-              <p>Verdict: {workItem.verdict}</p>
-              <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
-              {expandedIndex === index && (
-                <>
-                  <p>Merchant ID: {workItem.merchantId}</p>
-                  <p>Profile ID: {workItem.profileId}</p>
-                  <p>Merchant Order ID: {workItem.merchantOrderId}</p>
-                  <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
-                  <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
-                  <p>Language ID: {workItem.languageId}</p>
-                  <p>Placed By: {workItem.placedBy}</p>
-                  <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
-                  <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
-                  <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
-                  <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
-                  <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                  <p>Fulfiller ID: {workItem.fulfillerId}</p>
-                  <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
-                  <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
-                  <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
-                  <p>Shipping Priority: {workItem.shippingPriority}</p>
-                  <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
-                  <p>Merchant Product Name: {workItem.merchantProductName}</p>
-                  <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
-                  <p>Price: {workItem.price}</p>
-                  <p>Weight: {workItem.weight}</p>
-                  <p>Urgency: {workItem.urgency}</p>
-                  <p>Status: {workItem.status}</p>
-                  <p>Pallet Fullness: {workItem.pallet_fullness}</p>
-                </>
-              )}
-              <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
-            </div>
-          ))}
+          {isLoggedIn ? (
+            history.map((workItem, index) => (
+              <div key={index} className="w-full p-2 border border-gray-300">
+                <p>Name: {workItem.name}</p>
+                <p>Quantity: {workItem.quantity}</p>
+                <p>Verdict: {workItem.verdict}</p>
+                <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
+                {expandedIndex === index && (
+                  <>
+                    <p>Merchant ID: {workItem.merchantId}</p>
+                    <p>Profile ID: {workItem.profileId}</p>
+                    <p>Merchant Order ID: {workItem.merchantOrderId}</p>
+                    <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
+                    <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
+                    <p>Language ID: {workItem.languageId}</p>
+                    <p>Placed By: {workItem.placedBy}</p>
+                    <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
+                    <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
+                    <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
+                    <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
+                    <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
+                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
+                    <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
+                    <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
+                    <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
+                    <p>Shipping Priority: {workItem.shippingPriority}</p>
+                    <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
+                    <p>Merchant Product Name: {workItem.merchantProductName}</p>
+                    <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
+                    <p>Price: {workItem.price}</p>
+                    <p>Weight: {workItem.weight}</p>
+                    <p>Urgency: {workItem.urgency}</p>
+                    <p>Status: {workItem.status}</p>
+                    <p>Pallet Fullness: {workItem.pallet_fullness}</p>
+                  </>
+                )}
+                <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
+              </div>
+            ))
+          ) : (
+            <p>Please log in to view the history.</p>
+          )}
         </div>
       )}
     </div>

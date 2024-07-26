@@ -102,7 +102,10 @@ app.post('/api/users/:id', (req, res) => {
 
   userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })
     .then(updatedUser => res.json(updatedUser))
-    .catch(err => res.status(400).json('Error: ' + err));
+    .catch(err => {
+      console.error('Error updating user:', err); // Log error
+      res.status(400).json('Error: ' + err);
+    });
 });
 
 app.listen(3000, () => {
