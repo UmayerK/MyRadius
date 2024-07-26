@@ -1,10 +1,22 @@
+// userModel.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  userid: { type: String, unique: true },  // New field added
-  username: { type: String, required: true },
+  userid: { type: String, unique: true },
+  username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
+  merchantId: { type: String, default: '' },
+  profileId: { type: String, default: '' },
+  merchantOrderSupportContact: {
+    email: { type: String, default: '' },
+    phoneNumber: { type: String, default: '' }
+  },
+  supportContact: {
+    email: { type: String, default: '' }
+  },
+  merchantSalesChannel: { type: String, default: '' },
+  merchantCustomerId: { type: String, default: '' }
 });
 
 // Middleware to generate userid before saving

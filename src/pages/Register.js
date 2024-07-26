@@ -1,3 +1,4 @@
+// src/pages/Register.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../AuthContext'; // Ensure this path is correct
@@ -16,9 +17,14 @@ const Register = () => {
                 password,
                 username: name
             });
-            alert('Registration completed');
+            console.log('Registration response:', response.data); // Log response
+            if (response.data.success) {
+                alert('Registration completed');
+                login(response.data.userId);  // Automatically log in the user after registration
+            }
         } catch (error) {
-            alert('Registration failed');
+            console.error('Registration error:', error.response.data); // Log error
+            alert('Registration failed: ' + error.response.data);
         }
     };
 

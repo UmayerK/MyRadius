@@ -1,3 +1,4 @@
+// src/pages/CoreInfo.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../AuthContext'; // Ensure correct path to AuthContext
@@ -20,12 +21,16 @@ const CoreInfo = () => {
     merchantCustomerId: ''
   });
   const { userId } = useAuth(); // Assuming useAuth provides userId
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Fetch user information when the component mounts
-    axios.get(`/api/users/${userId}`)
-      .then(response => setUserInfo(response.data))
-      .catch(error => console.error('Error fetching user data:', error));
+    if (userId) {
+      axios.get(`/api/users/${userId}`)
+        .then(response => {
+          setUserInfo(response.data);
+        })
+        .catch(error => console.error('Error fetching user data:', error));
+    }
   }, [userId]);
 
   const handleChange = (e) => {
@@ -50,10 +55,14 @@ const CoreInfo = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    axios.put(`/api/users/${userId}`, userInfo)
-      .then(response => console.log('User information updated:', response.data))
-      .catch(error => console.error('Error updating user information:', error));
+    axios.post(`/api/users/${userId}`, userInfo)
+      .then(response => {
+        setMessage('User information updated successfully');
+      })
+      .catch(error => {
+        setMessage('Failed to update user information');
+        console.error('Error updating user information:', error);
+      });
   };
 
   return (
@@ -164,6 +173,11 @@ const CoreInfo = () => {
           Update
         </button>
       </form>
+      {message && (
+        <div className={`mt-4 p-4 rounded ${message.includes('successfully') ? 'bg-green-500' : 'bg-red-500'} text-white text-center`}>
+          {message}
+        </div>
+      )}
     </div>
   );
 };

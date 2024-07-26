@@ -1,8 +1,9 @@
+// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const orderModel = require('./Actual_Collection'); // Ensure correct path to the model file
-const userModel = require('./userModel'); // Assuming user model is defined in userModel.js
+const userModel = require('./userModel'); // Ensure correct path to the user model
 
 const app = express();
 app.use(cors());
@@ -35,11 +36,41 @@ app.post('/api/orders', (req, res) => {
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {
   const { email, password, username } = req.body;
-  const newUser = new userModel({ email, password, username });
+  console.log('Received registration data:', req.body); // Log received data
+
+  const newUser = new userModel({
+    email,
+    password,
+    username,
+    merchantId: 'merchant_' + Math.random().toString(36).substr(2, 9),
+    profileId: null,
+    merchantOrderSupportContact: {
+      email: null,
+      phoneNumber: null
+    },
+    supportContact: {
+      email: null
+    },
+    merchantSalesChannel: null,
+    merchantCustomerId: null
+  });
 
   newUser.save()
-    .then(() => res.json({ success: true }))
-    .catch(err => res.status(400).json('Error: ' + err));
+    .then(() => res.json({ success: true, userId: newUser._id }))
+    .catch(err => {
+      if (err.code === 11000) {
+        if (err.keyPattern.email) {
+          res.status(400).json('Email already exists.');
+        } else if (err.keyPattern.username) {
+          res.status(400).json('Username already exists.');
+        } else {
+          res.status(400).json('Duplicate key error.');
+        }
+      } else {
+        console.error('Error saving user:', err); // Log error
+        res.status(400).json('Error: ' + err);
+      }
+    });
 });
 
 // Endpoint to login a user
@@ -56,12 +87,20 @@ app.post('/api/login', (req, res) => {
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
+// Endpoint to get user information
+app.get('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  userModel.findById(userId)
+    .then(user => res.json(user))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
 // Endpoint to update user information
-app.put('/api/users/:id', (req, res) => {
+app.post('/api/users/:id', (req, res) => {
   const userId = req.params.id;
   const updatedData = req.body;
 
-  userModel.findByIdAndUpdate(userId, updatedData, { new: true })
+  userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })
     .then(updatedUser => res.json(updatedUser))
     .catch(err => res.status(400).json('Error: ' + err));
 });
