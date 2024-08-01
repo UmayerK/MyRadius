@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -35,24 +34,20 @@ app.post('/api/orders', (req, res) => {
 
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {
-  const { email, password, username } = req.body;
+  const { email, password, username, merchantId, fulfillerId } = req.body;
   console.log('Received registration data:', req.body); // Log received data
+
+  // Check if all required fields are provided
+  if (!email || !password || !username || !merchantId || !fulfillerId) {
+    return res.status(400).json('All fields are required.');
+  }
 
   const newUser = new userModel({
     email,
     password,
     username,
-    merchantId: 'merchant_' + Math.random().toString(36).substr(2, 9),
-    profileId: null,
-    merchantOrderSupportContact: {
-      email: null,
-      phoneNumber: null
-    },
-    supportContact: {
-      email: null
-    },
-    merchantSalesChannel: null,
-    merchantCustomerId: null
+    merchantId,
+    fulfillerId
   });
 
   newUser.save()
