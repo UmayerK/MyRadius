@@ -1,4 +1,3 @@
-// src/pages/Register.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../AuthContext'; // Ensure this path is correct
@@ -8,6 +7,7 @@ const Register = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const [merchantId, setMerchantId] = useState(''); // State for merchantId
     const { login } = useAuth();  // Get login function from context
 
     const handleRegister = async () => {
@@ -15,7 +15,8 @@ const Register = () => {
             const response = await axios.post('http://localhost:3000/api/register', {
                 email,
                 password,
-                username: name
+                username: name,
+                merchantId // Include merchantId in the request body
             });
             console.log('Registration response:', response.data); // Log response
             if (response.data.success) {
@@ -156,6 +157,20 @@ const Register = () => {
                                         placeholder="Name"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="merchant-id" className="sr-only">Merchant ID</label>
+                                    <input
+                                        id="merchant-id"
+                                        name="merchantId"
+                                        type="text"
+                                        autoComplete="merchant-id"
+                                        required
+                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                        placeholder="Merchant ID"
+                                        value={merchantId}
+                                        onChange={(e) => setMerchantId(e.target.value)}
                                     />
                                 </div>
                             </div>

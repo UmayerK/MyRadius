@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -35,39 +34,26 @@ app.post('/api/orders', (req, res) => {
 
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {
-  const { email, password, username } = req.body;
-  console.log('Received registration data:', req.body); // Log received data
+  const { email, password, username, merchantId } = req.body;
+  console.log('Received registration data:', req.body);
 
-  const newUser = new userModel({
-    email,
-    password,
-    username,
-    merchantId: 'merchant_' + Math.random().toString(36).substr(2, 9),
-    profileId: null,
-    merchantOrderSupportContact: {
-      email: null,
-      phoneNumber: null
-    },
-    supportContact: {
-      email: null
-    },
-    merchantSalesChannel: null,
-    merchantCustomerId: null
-  });
+  const newUser = new userModel({ email, password, username, merchantId });
 
   newUser.save()
     .then(() => res.json({ success: true, userId: newUser._id }))
     .catch(err => {
-      if (err.code === 11000) {
-        if (err.keyPattern.email) {
+      if (err.code === 11000) { // Handle duplicate key errors
+        if (err.keyPattern && err.keyPattern.email) {
           res.status(400).json('Email already exists.');
-        } else if (err.keyPattern.username) {
+        } else if (err.keyPattern && err.keyPattern.username) {
           res.status(400).json('Username already exists.');
+        } else if (err.keyPattern && err.keyPattern.merchantId) {
+          res.status(400).json('Merchant ID already exists.');
         } else {
           res.status(400).json('Duplicate key error.');
         }
       } else {
-        console.error('Error saving user:', err); // Log error
+        console.error('Error saving user:', err);
         res.status(400).json('Error: ' + err);
       }
     });
@@ -103,7 +89,7 @@ app.post('/api/users/:id', (req, res) => {
   userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })
     .then(updatedUser => res.json(updatedUser))
     .catch(err => {
-      console.error('Error updating user:', err); // Log error
+      console.error('Error updating user:', err);
       res.status(400).json('Error: ' + err);
     });
 });
