@@ -17,6 +17,27 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   console.error('Error connecting to MongoDB', err);
 });
 
+// Middleware to authenticate requests and attach merchantId
+app.use(async (req, res, next) => {
+  const userId = req.headers['x-user-id']; // Assuming userId is sent in the request headers
+  req.userId = userId;
+
+  if (userId) {
+    try {
+      const user = await userModel.findById(userId);
+      if (user) {
+        req.merchantId = user.merchantId; // Attach merchantId to the request
+      } else {
+        return res.status(400).json('User not found.');
+      }
+    } catch (err) {
+      return res.status(500).json('Error fetching user information.');
+    }
+  }
+
+  next();
+});
+
 // Endpoint to get all orders
 app.get('/api/orders', (req, res) => {
   orderModel.find()
@@ -26,7 +47,13 @@ app.get('/api/orders', (req, res) => {
 
 // Endpoint to create a new order
 app.post('/api/orders', (req, res) => {
-  const newOrder = new orderModel(req.body);
+  const { ...restOfBody } = req.body;
+  const newOrder = new orderModel({
+    ...restOfBody,
+    merchantId: req.merchantId, // Associate with logged-in user's merchantId
+    fulfillerId: null // Set fulfillerId to null
+  });
+  
   newOrder.save()
     .then(() => res.json('Order added!'))
     .catch(err => res.status(400).json('Error: ' + err));

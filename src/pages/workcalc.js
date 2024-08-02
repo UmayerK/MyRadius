@@ -7,7 +7,6 @@ const WorkCalc = () => {
   const [work, setWork] = useState([]);
   const [history, setHistory] = useState([]);
   const [newWork, setNewWork] = useState({
-    merchantId: '',
     profileId: '',
     merchantOrderId: '',
     merchantSalesChannel: '',
@@ -20,7 +19,6 @@ const WorkCalc = () => {
     testingConfiguration: '',
     fulfillmentGroupId: '',
     fulfillerOrderId: '',
-    fulfillerId: '',
     globalFulfillerId: '',
     shortFulfillmentGroupId: '',
     fulfillmentRequestVersion: 1,
@@ -78,8 +76,8 @@ const WorkCalc = () => {
   const [priceIncrement, setPriceIncrement] = useState(1);
   const [paletteCount, setPaletteCount] = useState(0);
   const [error, setError] = useState('');
-  const [expandedIndex, setExpandedIndex] = useState(null); // Track expanded order
-  const { isLoggedIn } = useAuth(); // Get login status from context
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  const { isLoggedIn, userId } = useAuth();
 
   useEffect(() => {
     if (paletteCount >= paletteSize) {
@@ -91,7 +89,9 @@ const WorkCalc = () => {
   useEffect(() => {
     if (isLoggedIn) {
       if (tab === 'accept') {
-        axios.get('http://localhost:3000/api/orders')
+        axios.get('http://localhost:3000/api/orders', {
+          headers: { 'x-user-id': userId }
+        })
           .then(response => {
             setWork(response.data);
           })
@@ -101,25 +101,28 @@ const WorkCalc = () => {
       }
 
       if (tab === 'history') {
-        axios.get('http://localhost:3000/api/orders')
+        axios.get('http://localhost:3000/api/orders', {
+          headers: { 'x-user-id': userId }
+        })
           .then(response => {
-            setHistory(response.data); // Fetch all orders for history tab
+            setHistory(response.data);
           })
           .catch(error => {
             console.error("There was an error fetching the history!", error);
           });
       }
     }
-  }, [tab, isLoggedIn]);
+  }, [tab, isLoggedIn, userId]);
 
   const handleGiveSubmit = (e) => {
     e.preventDefault();
     if (error === '') {
-      axios.post('http://localhost:3000/api/orders', newWork)
+      axios.post('http://localhost:3000/api/orders', newWork, {
+        headers: { 'x-user-id': userId }
+      })
         .then(response => {
-          setWork([...work, { ...newWork, verdict: 2 }]); // Add to state with 'verdict' set to 2 (on waitlist)
+          setWork([...work, { ...newWork, verdict: 2 }]);
           setNewWork({
-            merchantId: '',
             profileId: '',
             merchantOrderId: '',
             merchantSalesChannel: '',
@@ -132,7 +135,6 @@ const WorkCalc = () => {
             testingConfiguration: '',
             fulfillmentGroupId: '',
             fulfillerOrderId: '',
-            fulfillerId: '',
             globalFulfillerId: '',
             shortFulfillmentGroupId: '',
             fulfillmentRequestVersion: 1,
@@ -187,7 +189,7 @@ const WorkCalc = () => {
             pallet_fullness: 0
           });
           setPaletteCount(prevCount => prevCount + 1);
-          setTab('accept'); // Switch to accept tab after submission
+          setTab('accept');
         })
         .catch(error => {
           console.error("There was an error adding the order!", error);
@@ -252,7 +254,6 @@ const WorkCalc = () => {
 
       {tab === 'give' && (
         <form onSubmit={handleGiveSubmit} className="flex flex-col space-y-3 mt-10 items-center">
-          <input value={newWork.merchantId} onChange={e => handleInputChange(e, 'merchantId')} placeholder="Merchant ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.profileId} onChange={e => handleInputChange(e, 'profileId')} placeholder="Profile ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantOrderId} onChange={e => handleInputChange(e, 'merchantOrderId')} placeholder="Merchant Order ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantSalesChannel} onChange={e => handleInputChange(e, 'merchantSalesChannel')} placeholder="Merchant Sales Channel" className="w-full p-2 border border-gray-300" />
@@ -265,7 +266,6 @@ const WorkCalc = () => {
           <input value={newWork.testingConfiguration} onChange={e => handleInputChange(e, 'testingConfiguration')} placeholder="Testing Configuration" className="w-full p-2 border border-gray-300" />
           <input value={newWork.fulfillmentGroupId} onChange={e => handleInputChange(e, 'fulfillmentGroupId')} placeholder="Fulfillment Group ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.fulfillerOrderId} onChange={e => handleInputChange(e, 'fulfillerOrderId')} placeholder="Fulfiller Order ID" className="w-full p-2 border border-gray-300" />
-          <input value={newWork.fulfillerId} onChange={e => handleInputChange(e, 'fulfillerId')} placeholder="Fulfiller ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.globalFulfillerId} onChange={e => handleInputChange(e, 'globalFulfillerId')} placeholder="Global Fulfiller ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.shortFulfillmentGroupId} onChange={e => handleInputChange(e, 'shortFulfillmentGroupId')} placeholder="Short Fulfillment Group ID" className="w-full p-2 border border-gray-300" />
           <input type="number" value={newWork.fulfillmentRequestVersion} onChange={e => handleInputChange(e, 'fulfillmentRequestVersion')} placeholder="Fulfillment Request Version" className="w-full p-2 border border-gray-300" />
@@ -284,7 +284,7 @@ const WorkCalc = () => {
           <input value={newWork.destinationAddress.phoneExt} onChange={e => handleAddressChange(e, 'phoneExt', 'destinationAddress')} placeholder="Phone Extension" className="w-full p-2 border border-gray-300" />
           <input value={newWork.destinationAddress.email} onChange={e => handleAddressChange(e, 'email', 'destinationAddress')} placeholder="Email" className="w-full p-2 border border-gray-300" />
           <input value={newWork.destinationAddress.street1} onChange={e => handleAddressChange(e, 'street1', 'destinationAddress')} placeholder="Street 1" className="w-full p-2 border border-gray-300" />
-          <input value={newWork.destinationAddress.street2} onChange={e => handleAddressChange(e, 'street2', 'destinationAddress')} placeholder="Street 2" className="w-full p-2 border border-gray-300" />
+          <input value={newWork.destinationAddress.street2} onChange={e => handleAddressChange(e, 'street2', 'destinationAddress')} placeholder="Street 2" className="w-full p-2 border border-gray-300"/>
           <input value={newWork.destinationAddress.doorCode} onChange={e => handleAddressChange(e, 'doorCode', 'destinationAddress')} placeholder="Door Code" className="w-full p-2 border border-gray-300" />
           <input type="checkbox" checked={newWork.destinationAddress.isPOBox} onChange={e => setNewWork({ ...newWork, destinationAddress: { ...newWork.destinationAddress, isPOBox: e.target.checked } })} className="w-full p-2 border border-gray-300" /> Is PO Box
           <input type="checkbox" checked={newWork.destinationAddress.isResidential} onChange={e => setNewWork({ ...newWork, destinationAddress: { ...newWork.destinationAddress, isResidential: e.target.checked } })} className="w-full p-2 border border-gray-300" /> Is Residential
@@ -340,7 +340,6 @@ const WorkCalc = () => {
                 <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
                 {expandedIndex === index && (
                   <>
-                    <p>Merchant ID: {workItem.merchantId}</p>
                     <p>Profile ID: {workItem.profileId}</p>
                     <p>Merchant Order ID: {workItem.merchantOrderId}</p>
                     <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
@@ -352,7 +351,6 @@ const WorkCalc = () => {
                     <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
                     <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
                     <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
                     <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
                     <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
                     <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
@@ -392,7 +390,6 @@ const WorkCalc = () => {
                 <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
                 {expandedIndex === index && (
                   <>
-                    <p>Merchant ID: {workItem.merchantId}</p>
                     <p>Profile ID: {workItem.profileId}</p>
                     <p>Merchant Order ID: {workItem.merchantOrderId}</p>
                     <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
@@ -404,7 +401,6 @@ const WorkCalc = () => {
                     <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
                     <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
                     <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
                     <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
                     <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
                     <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
