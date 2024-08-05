@@ -19,6 +19,7 @@ const WorkCalc = () => {
     testingConfiguration: '',
     fulfillmentGroupId: '',
     fulfillerOrderId: '',
+    fulfillerId: '',
     globalFulfillerId: '',
     shortFulfillmentGroupId: '',
     fulfillmentRequestVersion: 1,
@@ -76,8 +77,19 @@ const WorkCalc = () => {
   const [priceIncrement, setPriceIncrement] = useState(1);
   const [paletteCount, setPaletteCount] = useState(0);
   const [error, setError] = useState('');
-  const [expandedIndex, setExpandedIndex] = useState(null);
-  const { isLoggedIn, userId } = useAuth();
+  const [expandedIndex, setExpandedIndex] = useState(null); // Track expanded order
+  const { isLoggedIn, userId } = useAuth(); // Get login status and userId from context
+  const [selectedWorkIds, setSelectedWorkIds] = useState([]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setNewWork(prevWork => ({
+        ...prevWork,
+        merchantId: userId, // Automatically set merchantId based on logged-in user
+        fulfillerId: null // Set fulfillerId to null
+      }));
+    }
+  }, [isLoggedIn, userId]);
 
   useEffect(() => {
     if (paletteCount >= paletteSize) {
@@ -105,7 +117,7 @@ const WorkCalc = () => {
           headers: { 'x-user-id': userId }
         })
           .then(response => {
-            setHistory(response.data);
+            setHistory(response.data.filter(order => order.fulfillerId === userId));
           })
           .catch(error => {
             console.error("There was an error fetching the history!", error);
@@ -117,11 +129,15 @@ const WorkCalc = () => {
   const handleGiveSubmit = (e) => {
     e.preventDefault();
     if (error === '') {
-      axios.post('http://localhost:3000/api/orders', newWork, {
+      axios.post('http://localhost:3000/api/orders', {
+        ...newWork,
+        merchantId: userId, // Ensure merchantId is set to the logged-in user's ID
+        fulfillerId: null // Set fulfillerId to null
+      }, {
         headers: { 'x-user-id': userId }
       })
         .then(response => {
-          setWork([...work, { ...newWork, verdict: 2 }]);
+          setWork([...work, { ...newWork, verdict: 2 }]); // Add to state with 'verdict' set to 2 (on waitlist)
           setNewWork({
             profileId: '',
             merchantOrderId: '',
@@ -189,7 +205,7 @@ const WorkCalc = () => {
             pallet_fullness: 0
           });
           setPaletteCount(prevCount => prevCount + 1);
-          setTab('accept');
+          setTab('accept'); // Switch to accept tab after submission
         })
         .catch(error => {
           console.error("There was an error adding the order!", error);
@@ -198,10 +214,34 @@ const WorkCalc = () => {
   };
 
   const handleAcceptSubmit = (index) => {
-    const newWorkList = [...work];
-    newWorkList[index].completed = !newWorkList[index].completed;
-    newWorkList[index].status = newWorkList[index].completed ? 'Completed' : 'Pending';
-    setWork(newWorkList);
+    setSelectedWorkIds(prevSelected => {
+      if (prevSelected.includes(work[index]._id)) {
+        return prevSelected.filter(id => id !== work[index]._id);
+      } else {
+        return [...prevSelected, work[index]._id];
+      }
+    });
+  };
+
+  const handleSubmitAcceptedWork = () => {
+    const updatedWorkList = work.map(workItem => {
+      if (selectedWorkIds.includes(workItem._id)) {
+        workItem.fulfillerId = userId; // Set fulfillerId to logged-in user's ID
+      }
+      return workItem;
+    }).filter(workItem => !selectedWorkIds.includes(workItem._id));
+
+    setWork(updatedWorkList);
+
+    axios.patch('http://localhost:3000/api/orders', { ids: selectedWorkIds, fulfillerId: userId })
+      .then(response => {
+        console.log('Work items updated:', response.data);
+        setSelectedWorkIds([]);
+        setTab('history'); // Switch to history tab after submission
+      })
+      .catch(error => {
+        console.error("There was an error updating the work items!", error);
+      });
   };
 
   const handleRejectSubmit = (index) => {
@@ -284,7 +324,7 @@ const WorkCalc = () => {
           <input value={newWork.destinationAddress.phoneExt} onChange={e => handleAddressChange(e, 'phoneExt', 'destinationAddress')} placeholder="Phone Extension" className="w-full p-2 border border-gray-300" />
           <input value={newWork.destinationAddress.email} onChange={e => handleAddressChange(e, 'email', 'destinationAddress')} placeholder="Email" className="w-full p-2 border border-gray-300" />
           <input value={newWork.destinationAddress.street1} onChange={e => handleAddressChange(e, 'street1', 'destinationAddress')} placeholder="Street 1" className="w-full p-2 border border-gray-300" />
-          <input value={newWork.destinationAddress.street2} onChange={e => handleAddressChange(e, 'street2', 'destinationAddress')} placeholder="Street 2" className="w-full p-2 border border-gray-300"/>
+          <input value={newWork.destinationAddress.street2} onChange={e => handleAddressChange(e, 'street2', 'destinationAddress')} placeholder="Street 2" className="w-full p-2 border border-gray-300" />
           <input value={newWork.destinationAddress.doorCode} onChange={e => handleAddressChange(e, 'doorCode', 'destinationAddress')} placeholder="Door Code" className="w-full p-2 border border-gray-300" />
           <input type="checkbox" checked={newWork.destinationAddress.isPOBox} onChange={e => setNewWork({ ...newWork, destinationAddress: { ...newWork.destinationAddress, isPOBox: e.target.checked } })} className="w-full p-2 border border-gray-300" /> Is PO Box
           <input type="checkbox" checked={newWork.destinationAddress.isResidential} onChange={e => setNewWork({ ...newWork, destinationAddress: { ...newWork.destinationAddress, isResidential: e.target.checked } })} className="w-full p-2 border border-gray-300" /> Is Residential
@@ -340,6 +380,8 @@ const WorkCalc = () => {
                 <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
                 {expandedIndex === index && (
                   <>
+                    <p>Merchant ID: {workItem.merchantId}</p>
+                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
                     <p>Profile ID: {workItem.profileId}</p>
                     <p>Merchant Order ID: {workItem.merchantOrderId}</p>
                     <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
@@ -367,7 +409,7 @@ const WorkCalc = () => {
                 )}
                 <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
                 <div className="flex space-x-2">
-                  <button onClick={() => handleAcceptSubmit(index)} className="text-white font-bold py-2 px-4 bg-green-500">{workItem.completed ? 'Undo' : 'Complete'}</button>
+                  <button onClick={() => handleAcceptSubmit(index)} className={`text-white font-bold py-2 px-4 ${selectedWorkIds.includes(workItem._id) ? 'bg-green-700' : 'bg-green-500'}`}>{selectedWorkIds.includes(workItem._id) ? 'Undo' : 'Complete'}</button>
                   <button onClick={() => handleRejectSubmit(index)} className="text-white font-bold py-2 px-4 bg-red-500">Reject</button>
                   <button onClick={() => handleWaitlistSubmit(index)} className="text-white font-bold py-2 px-4 bg-gray-500">Waitlist</button>
                 </div>
@@ -376,6 +418,7 @@ const WorkCalc = () => {
           ) : (
             <p>Please log in to view and accept work.</p>
           )}
+          <button onClick={handleSubmitAcceptedWork} className="text-white font-bold py-2 px-4 bg-blue-500 mt-4">Submit</button>
         </div>
       )}
 
@@ -390,6 +433,8 @@ const WorkCalc = () => {
                 <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
                 {expandedIndex === index && (
                   <>
+                    <p>Merchant ID: {workItem.merchantId}</p>
+                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
                     <p>Profile ID: {workItem.profileId}</p>
                     <p>Merchant Order ID: {workItem.merchantOrderId}</p>
                     <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
