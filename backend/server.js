@@ -17,7 +17,7 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   console.error('Error connecting to MongoDB', err);
 });
 
-// Middleware to authenticate requests and attach merchantId
+// Middleware to authenticate requests and attach merchantId and userId
 app.use(async (req, res, next) => {
   const userId = req.headers['x-user-id']; // Assuming userId is sent in the request headers
   req.userId = userId;
@@ -38,9 +38,16 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Endpoint to get all orders
+// Endpoint to get all orders with fulfillerId set to null (Accept Work Tab)
 app.get('/api/orders', (req, res) => {
-  orderModel.find()
+  orderModel.find({ fulfillerId: null })
+    .then(orders => res.json(orders))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to get orders where fulfillerId matches the logged-in user (History Tab)
+app.get('/api/orders/history', (req, res) => {
+  orderModel.find({ fulfillerId: req.userId })
     .then(orders => res.json(orders))
     .catch(err => res.status(400).json('Error: ' + err));
 });
@@ -59,10 +66,17 @@ app.post('/api/orders', (req, res) => {
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
+// Endpoint to update fulfillerId for selected orders
+app.patch('/api/orders', (req, res) => {
+  const { ids, fulfillerId } = req.body;
+  orderModel.updateMany({ _id: { $in: ids } }, { $set: { fulfillerId } })
+    .then(() => res.json('Orders updated!'))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {
   const { email, password, username, merchantId, fulfillerId } = req.body;
-  console.log('Received registration data:', req.body); // Log received data
 
   // Check if all required fields are provided
   if (!email || !password || !username || !merchantId || !fulfillerId) {

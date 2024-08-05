@@ -113,11 +113,11 @@ const WorkCalc = () => {
       }
 
       if (tab === 'history') {
-        axios.get('http://localhost:3000/api/orders', {
+        axios.get('http://localhost:3000/api/orders/history', {
           headers: { 'x-user-id': userId }
         })
           .then(response => {
-            setHistory(response.data.filter(order => order.fulfillerId === userId));
+            setHistory(response.data);
           })
           .catch(error => {
             console.error("There was an error fetching the history!", error);
@@ -233,7 +233,9 @@ const WorkCalc = () => {
 
     setWork(updatedWorkList);
 
-    axios.patch('http://localhost:3000/api/orders', { ids: selectedWorkIds, fulfillerId: userId })
+    axios.patch('http://localhost:3000/api/orders', { ids: selectedWorkIds, fulfillerId: userId }, {
+      headers: { 'x-user-id': userId }
+    })
       .then(response => {
         console.log('Work items updated:', response.data);
         setSelectedWorkIds([]);
