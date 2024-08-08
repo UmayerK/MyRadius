@@ -306,38 +306,48 @@ const WorkCalc = () => {
   };
 
   const moveWorkItem = (workItemId, direction) => {
-  setHistory((prevHistory) => {
-    const columns = ['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'];
-    const newHistory = { ...prevHistory };
-
-    let sourceColumn, sourceIndex;
-    columns.forEach((column) => {
-      const index = newHistory[column].findIndex((item) => item._id === workItemId);
-      if (index !== -1) {
-        sourceColumn = column;
-        sourceIndex = index;
+    setHistory((prevHistory) => {
+      const columns = ['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'];
+      const newHistory = { ...prevHistory };
+  
+      let sourceColumn, sourceIndex;
+      columns.forEach((column) => {
+        const index = newHistory[column].findIndex((item) => item._id === workItemId);
+        if (index !== -1) {
+          sourceColumn = column;
+          sourceIndex = index;
+        }
+      });
+  
+      if (sourceColumn !== undefined && sourceIndex !== undefined) {
+        const sourceColumnIndex = columns.indexOf(sourceColumn);
+        const destColumnIndex = sourceColumnIndex + (direction === 'right' ? 1 : -1);
+        
+        if (destColumnIndex >= 0 && destColumnIndex < columns.length) {
+          const destColumn = columns[destColumnIndex];
+          const [movedItem] = newHistory[sourceColumn].splice(sourceIndex, 1);
+          movedItem.status = destColumn;
+          newHistory[destColumn].push(movedItem);
+  
+          console.log(`Moved item from ${sourceColumn} to ${destColumn}`);
+  
+          axios.patch('http://localhost:3000/api/orders/move', { workItemId, newStatus: destColumn })
+            .then(response => {
+              console.log('Work item moved:', response.data);
+            })
+            .catch(error => {
+              console.error("There was an error moving the work item!", error);
+            });
+        } else {
+          console.error(`Invalid destination column index: ${destColumnIndex}`);
+        }
+      } else {
+        console.error(`Source column or index not found for workItemId: ${workItemId}`);
       }
+  
+      return newHistory;
     });
-
-    const destColumnIndex = columns.indexOf(sourceColumn) + (direction === 'right' ? 1 : -1);
-    if (destColumnIndex >= 0 && destColumnIndex < columns.length) {
-      const destColumn = columns[destColumnIndex];
-      const [movedItem] = newHistory[sourceColumn].splice(sourceIndex, 1);
-      movedItem.status = destColumn;
-      newHistory[destColumn].push(movedItem);
-      axios.patch('http://localhost:3000/api/orders/move', { workItemId, newStatus: destColumn })
-        .then(response => {
-          console.log('Work item moved:', response.data);
-        })
-        .catch(error => {
-          console.error("There was an error moving the work item!", error);
-        });
-    }
-
-    return newHistory;
-  });
-};
-
+  };
   
   return (
     <div className="flex flex-col items-center justify-start min-h-screen w-full p-4 mt-10" style={{ fontFamily: 'sans-serif' }}>
@@ -481,8 +491,8 @@ const WorkCalc = () => {
 
 {tab === 'history' && (
   <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
-    {['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'].map((columnId) => (
-      <div key={columnId} className="w-1/5 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+    {['accepted', 'waitlisted', 'finished'].map((columnId) => (
+      <div key={columnId} className="w-1/3 p-4 bg-gray-800 border border-gray-700 rounded-lg">
         <h2 className="text-lg font-bold capitalize">{columnId}</h2>
         {history[columnId] && history[columnId].map((workItem, index) => (
           <div key={workItem._id} className="p-4 mb-4 bg-gray-700 rounded-lg">
@@ -542,7 +552,6 @@ const WorkCalc = () => {
     ))}
   </div>
 )}
-
 
     </div>
   );
