@@ -306,45 +306,39 @@ const WorkCalc = () => {
   };
 
   const moveWorkItem = (workItemId, direction) => {
-    setHistory((prevHistory) => {
-      const newHistory = { ...prevHistory };
-      let foundItem = null;
-      let currentColumn = '';
+  setHistory((prevHistory) => {
+    const columns = ['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'];
+    const newHistory = { ...prevHistory };
 
-      // Find the work item and its current column
-      for (const column in newHistory) {
-        const index = newHistory[column].findIndex(item => item._id === workItemId);
-        if (index !== -1) {
-          foundItem = newHistory[column][index];
-          currentColumn = column;
-          newHistory[column].splice(index, 1);
-          break;
-        }
+    let sourceColumn, sourceIndex;
+    columns.forEach((column) => {
+      const index = newHistory[column].findIndex((item) => item._id === workItemId);
+      if (index !== -1) {
+        sourceColumn = column;
+        sourceIndex = index;
       }
+    });
 
-      if (foundItem) {
-        const columnOrder = ['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'];
-        const currentIndex = columnOrder.indexOf(currentColumn);
-        let newIndex = currentIndex;
-
-        if (direction === 'left' && currentIndex > 0) {
-          newIndex -= 1;
-        } else if (direction === 'right' && currentIndex < columnOrder.length - 1) {
-          newIndex += 1;
-        }
-
-        newHistory[columnOrder[newIndex]].push(foundItem);
-        axios.patch('http://localhost:3000/api/orders/move', { id: workItemId, status: columnOrder[newIndex] }, {
-          headers: { 'x-user-id': userId }
-        }).catch(error => {
+    const destColumnIndex = columns.indexOf(sourceColumn) + (direction === 'right' ? 1 : -1);
+    if (destColumnIndex >= 0 && destColumnIndex < columns.length) {
+      const destColumn = columns[destColumnIndex];
+      const [movedItem] = newHistory[sourceColumn].splice(sourceIndex, 1);
+      movedItem.status = destColumn;
+      newHistory[destColumn].push(movedItem);
+      axios.patch('http://localhost:3000/api/orders/move', { workItemId, newStatus: destColumn })
+        .then(response => {
+          console.log('Work item moved:', response.data);
+        })
+        .catch(error => {
           console.error("There was an error moving the work item!", error);
         });
-      }
+    }
 
-      return newHistory;
-    });
-  };
+    return newHistory;
+  });
+};
 
+  
   return (
     <div className="flex flex-col items-center justify-start min-h-screen w-full p-4 mt-10" style={{ fontFamily: 'sans-serif' }}>
       <div className="flex space-x-4 mb-4">
@@ -415,6 +409,7 @@ const WorkCalc = () => {
           <input value={newWork.orderedSkuCode} onChange={e => handleInputChange(e, 'orderedSkuCode')} placeholder="Ordered SKU Code" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantProductName} onChange={e => handleInputChange(e, 'merchantProductName')} placeholder="Merchant Product Name" className="w-full p-2 border border-gray-300" />
           <input value={newWork.documentReferenceUrl} onChange={e => handleInputChange(e, 'documentReferenceUrl')} placeholder="Document Reference URL" className="w-full p-2 border border-gray-300" />
+
           <input value={newWork.price} onChange={e => handleInputChange(e, 'price')} placeholder="Price" className="w-full p-2 border border-gray-300" disabled={paletteCount > 0} />
           <input value={newWork.weight} onChange={e => handleInputChange(e, 'weight')} placeholder="Weight" className="w-full p-2 border border-gray-300" />
           <input value={newWork.name} onChange={e => setNewWork({ ...newWork, name: e.target.value })} placeholder="Name" className="w-full p-2 border border-gray-300" />
@@ -434,7 +429,7 @@ const WorkCalc = () => {
       {tab === 'accept' && (
         <div className="flex flex-col space-y-3 mt-10 items-center text-white">
           {isLoggedIn ? (
-            work.filter(workItem => workItem.fulfillerId === null).map((workItem, index) => (
+            work.map((workItem, index) => (
               <div key={index} className="w-full p-2 border border-gray-300">
                 <p>Name: {workItem.name}</p>
                 <p>Quantity: {workItem.quantity}</p>
@@ -443,6 +438,7 @@ const WorkCalc = () => {
                 {expandedIndex === index && (
                   <>
                     <p>Merchant ID: {workItem.merchantId}</p>
+                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
                     <p>Profile ID: {workItem.profileId}</p>
                     <p>Merchant Order ID: {workItem.merchantOrderId}</p>
                     <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
@@ -454,7 +450,6 @@ const WorkCalc = () => {
                     <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
                     <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
                     <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
                     <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
                     <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
                     <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
@@ -484,73 +479,71 @@ const WorkCalc = () => {
         </div>
       )}
 
-      {tab === 'history' && (
-        <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
-          {['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'].map((status, columnIndex) => (
-            <div key={status} className="w-1/5 p-4 bg-gray-800 border border-gray-700 rounded-lg">
-              <div className="flex justify-between items-center mb-4">
-                {columnIndex > 0 && (
-                  <button
-                    onClick={() => moveWorkItem(status, 'left')}
-                    className="text-white font-bold py-2 px-4 bg-blue-500"
-                  >
-                    &larr;
-                  </button>
-                )}
-                <h2 className="text-lg font-bold capitalize">{status}</h2>
-                {columnIndex < 4 && (
-                  <button
-                    onClick={() => moveWorkItem(status, 'right')}
-                    className="text-white font-bold py-2 px-4 bg-blue-500"
-                  >
-                    &rarr;
-                  </button>
-                )}
-              </div>
-              {history[status].map((workItem, index) => (
-                <div key={workItem._id} className="p-4 mb-4 bg-gray-700 rounded-lg">
-                  <p>Name: {workItem.name}</p>
-                  <p>Quantity: {workItem.quantity}</p>
-                  <p>Verdict: {workItem.verdict}</p>
-                  <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
-                  <p>Merchant ID: {workItem.merchantId}</p>
-                  <p>Fulfiller ID: {workItem.fulfillerId}</p>
-                  {expandedIndex === index && (
-                    <>
-                      <p>Profile ID: {workItem.profileId}</p>
-                      <p>Merchant Order ID: {workItem.merchantOrderId}</p>
-                      <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
-                      <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
-                      <p>Language ID: {workItem.languageId}</p>
-                      <p>Placed By: {workItem.placedBy}</p>
-                      <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
-                      <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
-                      <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
-                      <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
-                      <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                      <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
-                      <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
-                      <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
-                      <p>Shipping Priority: {workItem.shippingPriority}</p>
-                      <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
-                      <p>Merchant Product Name: {workItem.merchantProductName}</p>
-                      <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
-                      <p>Price: {workItem.price}</p>
-                      <p>Weight: {workItem.weight}</p>
-                      <p>Urgency: {workItem.urgency}</p>
-                      <p>Status: {workItem.status}</p>
-                      <p>Pallet Fullness: {workItem.pallet_fullness}</p>
-                    </>
-                  )}
-                  <button onClick={() => toggleExpand(index)} className="text-blue-500">
-                    {expandedIndex === index ? 'See Less' : 'See More'}
-                  </button>
-                </div>
-              ))}
+{tab === 'history' && (
+  <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
+    {['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'].map((columnId) => (
+      <div key={columnId} className="w-1/5 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+        <h2 className="text-lg font-bold capitalize">{columnId}</h2>
+        {history[columnId] && history[columnId].map((workItem, index) => (
+          <div key={workItem._id} className="p-4 mb-4 bg-gray-700 rounded-lg">
+            <p>Name: {workItem.name}</p>
+            <p>Quantity: {workItem.quantity}</p>
+            <p>Verdict: {workItem.verdict}</p>
+            <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
+            <p>Merchant ID: {workItem.merchantId}</p>
+            <p>Fulfiller ID: {workItem.fulfillerId}</p>
+            {expandedIndex === index && (
+              <>
+                <p>Profile ID: {workItem.profileId}</p>
+                <p>Merchant Order ID: {workItem.merchantOrderId}</p>
+                <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
+                <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
+                <p>Language ID: {workItem.languageId}</p>
+                <p>Placed By: {workItem.placedBy}</p>
+                <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
+                <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
+                <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
+                <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
+                <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
+                <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
+                <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
+                <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
+                <p>Shipping Priority: {workItem.shippingPriority}</p>
+                <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
+                <p>Merchant Product Name: {workItem.merchantProductName}</p>
+                <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
+                <p>Price: {workItem.price}</p>
+                <p>Weight: {workItem.weight}</p>
+                <p>Urgency: {workItem.urgency}</p>
+                <p>Status: {workItem.status}</p>
+                <p>Pallet Fullness: {workItem.pallet_fullness}</p>
+              </>
+            )}
+            <button onClick={() => toggleExpand(index)} className="text-blue-500">
+              {expandedIndex === index ? 'See Less' : 'See More'}
+            </button>
+            <div className="flex justify-between mt-2">
+              <button
+                onClick={() => moveWorkItem(workItem._id, 'left')}
+                className="text-white font-bold py-1 px-2 bg-blue-500"
+              >
+                &larr;
+              </button>
+              <button
+                onClick={() => moveWorkItem(workItem._id, 'right')}
+                className="text-white font-bold py-1 px-2 bg-blue-500"
+              >
+                &rarr;
+              </button>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+)}
+
+
     </div>
   );
 };
