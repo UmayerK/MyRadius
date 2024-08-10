@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useAuth } from '../AuthContext'; // Ensure correct path to AuthContext
 
 const WorkCalc = () => {
@@ -7,9 +8,7 @@ const WorkCalc = () => {
   const [work, setWork] = useState([]);
   const [history, setHistory] = useState({
     accepted: [],
-   
     waitlisted: [],
-    
     finished: []
   });
   const [newWork, setNewWork] = useState({
@@ -274,7 +273,7 @@ const WorkCalc = () => {
 
   const handleWaitlistSubmit = (index) => {
     const newWorkList = [...work];
-    newWorkList[index].status = 'Waitlisted';
+    newWorkList[index].status = 'waitlisted';
     newWorkList[index].verdict = 2;
     setWork(newWorkList);
   };
@@ -305,9 +304,9 @@ const WorkCalc = () => {
 
   const moveWorkItem = (workItemId, direction) => {
     setHistory((prevHistory) => {
-      const columns = ['accepted',  'waitlisted',  'finished'];
+      const columns = ['accepted', 'waitlisted', 'finished'];
       const newHistory = { ...prevHistory };
-  
+
       let sourceColumn, sourceIndex;
       columns.forEach((column) => {
         const index = newHistory[column].findIndex((item) => item._id === workItemId);
@@ -316,37 +315,88 @@ const WorkCalc = () => {
           sourceIndex = index;
         }
       });
-  
+
       if (sourceColumn !== undefined && sourceIndex !== undefined) {
         const sourceColumnIndex = columns.indexOf(sourceColumn);
         const destColumnIndex = sourceColumnIndex + (direction === 'right' ? 1 : -1);
-        
+
         if (destColumnIndex >= 0 && destColumnIndex < columns.length) {
           const destColumn = columns[destColumnIndex];
           const [movedItem] = newHistory[sourceColumn].splice(sourceIndex, 1);
           movedItem.status = destColumn;
+
+          // Update the verdict based on destination column
+          if (destColumn === 'waitlisted') {
+            movedItem.verdict = 2;
+          } else if (destColumn === 'finished') {
+            movedItem.verdict = 0;
+          }
+
           newHistory[destColumn].push(movedItem);
-  
-          console.log(`Moved item from ${sourceColumn} to ${destColumn}`);
-  
-          axios.patch('http://localhost:3000/api/orders/move', { workItemId, newStatus: destColumn })
+
+          // Update the state to trigger a re-render
+          setHistory(newHistory);
+
+          // Send the update to the backend
+          axios.patch('http://localhost:3000/api/orders/move', {
+            workItemId,
+            newStatus: destColumn,
+            verdict: movedItem.verdict,
+          })
             .then(response => {
               console.log('Work item moved:', response.data);
             })
             .catch(error => {
               console.error("There was an error moving the work item!", error);
             });
-        } else {
-          console.error(`Invalid destination column index: ${destColumnIndex}`);
         }
-      } else {
-        console.error(`Source column or index not found for workItemId: ${workItemId}`);
       }
-  
+
       return newHistory;
     });
   };
-  
+
+  const handleDragEnd = (result) => {
+    const { source, destination } = result;
+
+    if (!destination) return;
+
+    if (source.droppableId !== destination.droppableId) {
+      const sourceItems = Array.from(history[source.droppableId]);
+      const [removed] = sourceItems.splice(source.index, 1);
+      const destItems = Array.from(history[destination.droppableId]);
+      destItems.splice(destination.index, 0, removed);
+
+      setHistory({
+        ...history,
+        [source.droppableId]: sourceItems,
+        [destination.droppableId]: destItems
+      });
+
+      // Update the backend with the new status
+      axios.patch('http://localhost:3000/api/orders/move', {
+        workItemId: removed._id,
+        newStatus: destination.droppableId,
+        verdict: destination.droppableId === 'waitlisted' ? 2 : 0
+      })
+        .then(response => {
+          console.log('Work item moved:', response.data);
+        })
+        .catch(error => {
+          console.error("There was an error moving the work item!", error);
+        });
+    } else {
+      const items = Array.from(history[source.droppableId]);
+      const [removed] = items.splice(source.index, 1);
+      items.splice(destination.index, 0, removed);
+
+      setHistory({
+        ...history,
+        [source.droppableId]: items
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-start min-h-screen w-full p-4 mt-10" style={{ fontFamily: 'sans-serif' }}>
       <div className="flex space-x-4 mb-4">
@@ -488,67 +538,89 @@ const WorkCalc = () => {
       )}
 
 {tab === 'history' && (
-  <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
-    {['accepted', 'waitlisted', 'finished'].map((columnId) => (
-      <div key={columnId} className="w-1/3 p-4 bg-gray-800 border border-gray-700 rounded-lg">
-        <h2 className="text-lg font-bold capitalize">{columnId}</h2>
-        {history[columnId] && history[columnId].map((workItem, index) => (
-          <div key={workItem._id} className="p-4 mb-4 bg-gray-700 rounded-lg">
-            <p>Name: {workItem.name}</p>
-            <p>Quantity: {workItem.quantity}</p>
-            <p>Verdict: {workItem.verdict}</p>
-            <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
-            <p>Merchant ID: {workItem.merchantId}</p>
-            <p>Fulfiller ID: {workItem.fulfillerId}</p>
-            {expandedIndex === index && (
-              <>
-                <p>Profile ID: {workItem.profileId}</p>
-                <p>Merchant Order ID: {workItem.merchantOrderId}</p>
-                <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
-                <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
-                <p>Language ID: {workItem.languageId}</p>
-                <p>Placed By: {workItem.placedBy}</p>
-                <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
-                <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
-                <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
-                <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
-                <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
-                <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
-                <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
-                <p>Shipping Priority: {workItem.shippingPriority}</p>
-                <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
-                <p>Merchant Product Name: {workItem.merchantProductName}</p>
-                <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
-                <p>Price: {workItem.price}</p>
-                <p>Weight: {workItem.weight}</p>
-                <p>Urgency: {workItem.urgency}</p>
-                <p>Status: {workItem.status}</p>
-                <p>Pallet Fullness: {workItem.pallet_fullness}</p>
-              </>
-            )}
-            <button onClick={() => toggleExpand(index)} className="text-blue-500">
-              {expandedIndex === index ? 'See Less' : 'See More'}
-            </button>
-            <div className="flex justify-between mt-2">
-              <button
-                onClick={() => moveWorkItem(workItem._id, 'left')}
-                className="text-white font-bold py-1 px-2 bg-blue-500"
-              >
-                &larr;
-              </button>
-              <button
-                onClick={() => moveWorkItem(workItem._id, 'right')}
-                className="text-white font-bold py-1 px-2 bg-blue-500"
-              >
-                &rarr;
-              </button>
+  <DragDropContext onDragEnd={handleDragEnd}>
+    <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
+      {['accepted', 'waitlisted', 'finished'].map((columnId) => (
+        <Droppable key={columnId} droppableId={columnId}>
+          {(provided) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className="w-1/3 p-4 bg-gray-800 border border-gray-700 rounded-lg"
+            >
+              <h2 className="text-lg font-bold capitalize">{columnId}</h2>
+              {history[columnId].map((workItem, index) => (
+                <Draggable key={workItem._id} draggableId={workItem._id} index={index}>
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      className="p-4 mb-4 bg-gray-700 rounded-lg"
+                    >
+                      <p>Name: {workItem.name}</p>
+                      <p>Quantity: {workItem.quantity}</p>
+                      <p>Verdict: {workItem.verdict}</p>
+                      <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
+                      <p>Merchant ID: {workItem.merchantId}</p>
+                      <p>Fulfiller ID: {workItem.fulfillerId}</p>
+                      {expandedIndex === index && (
+                        <>
+                          <p>Profile ID: {workItem.profileId}</p>
+                          <p>Merchant Order ID: {workItem.merchantOrderId}</p>
+                          <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
+                          <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
+                          <p>Language ID: {workItem.languageId}</p>
+                          <p>Placed By: {workItem.placedBy}</p>
+                          <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
+                          <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
+                          <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
+                          <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
+                          <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
+                          <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
+                          <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
+                          <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
+                          <p>Shipping Priority: {workItem.shippingPriority}</p>
+                          <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
+                          <p>Merchant Product Name: {workItem.merchantProductName}</p>
+                          <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
+                          <p>Price: {workItem.price}</p>
+                          <p>Weight: {workItem.weight}</p>
+                          <p>Urgency: {workItem.urgency}</p>
+                          <p>Status: {workItem.status}</p>
+                          <p>Pallet Fullness: {workItem.pallet_fullness}</p>
+                        </>
+                      )}
+                      <button onClick={() => toggleExpand(index)} className="text-blue-500">
+                        {expandedIndex === index ? 'See Less' : 'See More'}
+                      </button>
+                      <div className="flex justify-between mt-2">
+                        <button
+                          onClick={() => moveWorkItem(workItem._id, 'left')}
+                          className="text-white font-bold py-1 px-2 bg-blue-500"
+                          disabled={columnId === 'accepted'} // Disable left arrow for the first column
+                        >
+                          &larr;
+                        </button>
+                        <button
+                          onClick={() => moveWorkItem(workItem._id, 'right')}
+                          className="text-white font-bold py-1 px-2 bg-blue-500"
+                          disabled={columnId === 'finished'} // Disable right arrow for the last column
+                        >
+                          &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
             </div>
-          </div>
-        ))}
-      </div>
-    ))}
-  </div>
+          )}
+        </Droppable>
+      ))}
+    </div>
+  </DragDropContext>
 )}
 
     </div>
