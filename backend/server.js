@@ -74,6 +74,15 @@ app.patch('/api/orders', (req, res) => {
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
+// Endpoint to move an order to a new status and update the verdict
+app.patch('/api/orders/move', (req, res) => {
+  const { workItemId, newStatus, verdict } = req.body;
+
+  orderModel.findByIdAndUpdate(workItemId, { status: newStatus, verdict: verdict }, { new: true })
+    .then(updatedOrder => res.json(updatedOrder))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {
   const { email, password, username, merchantId, fulfillerId } = req.body;
