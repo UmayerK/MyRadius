@@ -7,9 +7,9 @@ const WorkCalc = () => {
   const [work, setWork] = useState([]);
   const [history, setHistory] = useState({
     accepted: [],
-    processed: [],
+   
     waitlisted: [],
-    inProgress: [],
+    
     finished: []
   });
   const [newWork, setNewWork] = useState({
@@ -133,9 +133,7 @@ const WorkCalc = () => {
               return acc;
             }, {
               accepted: [],
-              processed: [],
               waitlisted: [],
-              inProgress: [],
               finished: []
             });
             setHistory(categorizedHistory);
@@ -307,7 +305,7 @@ const WorkCalc = () => {
 
   const moveWorkItem = (workItemId, direction) => {
     setHistory((prevHistory) => {
-      const columns = ['accepted', 'processed', 'waitlisted', 'inProgress', 'finished'];
+      const columns = ['accepted',  'waitlisted',  'finished'];
       const newHistory = { ...prevHistory };
   
       let sourceColumn, sourceIndex;
