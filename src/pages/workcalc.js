@@ -404,7 +404,7 @@ const WorkCalc = () => {
       <div className="flex space-x-4 mb-4">
         <button onClick={() => setTab('give')} className={`mt-4 text-white font-bold py-4 px-8 ${tab === 'give' ? 'bg-green-700' : 'bg-green-500'}`}>Give Work</button>
         <button onClick={() => setTab('accept')} className={`mt-4 text-white font-bold py-4 px-8 ${tab === 'accept' ? 'bg-red-700' : 'bg-red-500'}`}>Accept Work</button>
-        <button onClick={() => setTab('history')} className={`mt-4 text-white font-bold py-4 px-8 ${tab === 'history' ? 'bg-gray-700' : 'bg-gray-500'}`}>History</button>
+        <button onClick={() => setTab('history')} className={`mt-4 text-white font-bold py-4 px-8 ${tab === 'history' ? 'bg-gray-700' : 'bg-gray-500'}`}>Backlog</button>
       </div>
 
       {error && <p className="text-red-500">{error}</p>}
