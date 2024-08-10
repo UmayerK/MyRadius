@@ -8,6 +8,7 @@ const WorkCalc = () => {
   const [work, setWork] = useState([]);
   const [history, setHistory] = useState({
     accepted: [],
+    inprogress: [], // New column added here
     waitlisted: [],
     finished: []
   });
@@ -132,6 +133,7 @@ const WorkCalc = () => {
               return acc;
             }, {
               accepted: [],
+              inprogress: [], // Ensure new column is populated
               waitlisted: [],
               finished: []
             });
@@ -304,7 +306,7 @@ const WorkCalc = () => {
 
   const moveWorkItem = (workItemId, direction) => {
     setHistory((prevHistory) => {
-      const columns = ['accepted', 'waitlisted', 'finished'];
+      const columns = ['accepted', 'inprogress', 'waitlisted', 'finished']; // Updated columns with inprogress
       const newHistory = { ...prevHistory };
 
       let sourceColumn, sourceIndex;
@@ -540,13 +542,13 @@ const WorkCalc = () => {
 {tab === 'history' && (
   <DragDropContext onDragEnd={handleDragEnd}>
     <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
-      {['accepted', 'waitlisted', 'finished'].map((columnId) => (
+      {['accepted', 'inprogress', 'waitlisted', 'finished'].map((columnId) => ( // Added 'inprogress' here
         <Droppable key={columnId} droppableId={columnId}>
           {(provided) => (
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="w-1/3 p-4 bg-gray-800 border border-gray-700 rounded-lg"
+              className="w-1/4 p-4 bg-gray-800 border border-gray-700 rounded-lg"
             >
               <h2 className="text-lg font-bold capitalize">{columnId}</h2>
               {history[columnId].map((workItem, index) => (
