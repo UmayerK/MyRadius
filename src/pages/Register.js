@@ -55,7 +55,7 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center ml-[15%] ">
+        <div className="min-h-screen flex flex-col items-center justify-center ml-[1%]  ">
             <div className="w-full max-w-md p-8 space-y-8 bg-white rounded shadow-md">
                 <div className="flex justify-center mb-4">
                     <button

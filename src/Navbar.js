@@ -1,13 +1,13 @@
+import React, { useState } from "react";
 import { Link, useMatch, useResolvedPath } from "react-router-dom";
-import { useAuth } from "./AuthContext"; // Ensure this path is correct
-import { useState } from "react"; // Import useState for managing dropdown state
+import { useAuth } from "./AuthContext";
 
 export default function Navbar() {
-  const { isLoggedIn, logout } = useAuth(); // Get isLoggedIn and logout from context
-  const [dropdownOpen, setDropdownOpen] = useState(false); // State to manage dropdown visibility
+  const { isLoggedIn, logout } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen); // Toggle dropdown visibility
+    setDropdownOpen(!dropdownOpen);
   };
 
   return (
@@ -15,8 +15,9 @@ export default function Navbar() {
       <Link to="/" className="text-white text-xl font-bold">
         Radius
       </Link>
-      <ul className="flex space-x-4">
-        <CustomLink to="/pricing">Pricing</CustomLink>
+      <div className="flex space-x-4">
+        <CustomLink to="/pricing">MCP Order System</CustomLink>
+        <CustomLink to="/about">About</CustomLink> {/* About link using CustomLink */}
         {isLoggedIn ? (
           <li className="relative">
             <button
@@ -51,7 +52,7 @@ export default function Navbar() {
         ) : (
           <CustomLink to="/register">Register/Login</CustomLink>
         )}
-      </ul>
+      </div>
     </nav>
   );
 }
@@ -62,7 +63,7 @@ function CustomLink({ to, children, ...props }) {
 
   return (
     <li className={isActive ? "text-blue-700" : "text-white"}>
-      <Link to={to} {...props} className="hover:text-blue-300">
+      <Link to={to} {...props} className="hover:text-blue-300 px-4 py-2 rounded">
         {children}
       </Link>
     </li>
