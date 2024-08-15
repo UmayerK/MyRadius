@@ -47,10 +47,11 @@ app.get('/api/orders', (req, res) => {
 
 // Endpoint to get orders where fulfillerId matches the logged-in user (History Tab)
 app.get('/api/orders/history', (req, res) => {
-  orderModel.find({ fulfillerId: req.userId })
+  orderModel.find({ merchantId: req.merchantId })  // Fetch based on merchantId
     .then(orders => res.json(orders))
     .catch(err => res.status(400).json('Error: ' + err));
 });
+
 
 // Endpoint to create a new order
 app.post('/api/orders', (req, res) => {
