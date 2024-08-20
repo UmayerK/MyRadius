@@ -8,11 +8,13 @@ const WorkCalc = () => {
   const [work, setWork] = useState([]);
   const [history, setHistory] = useState({
     accepted: [],
-    inprogress: [], // New column added here
+    inprogress: [],
     waitlisted: [],
     finished: []
   });
+  const [timers, setTimers] = useState({});
   const [newWork, setNewWork] = useState({
+    ttl: '', // Add TTL field
     profileId: '',
     merchantOrderId: '',
     merchantSalesChannel: '',
@@ -133,7 +135,7 @@ const WorkCalc = () => {
               return acc;
             }, {
               accepted: [],
-              inprogress: [], // Ensure new column is populated
+              inprogress: [],
               waitlisted: [],
               finished: []
             });
@@ -146,19 +148,72 @@ const WorkCalc = () => {
     }
   }, [tab, isLoggedIn, userId]);
 
+  useEffect(() => {
+    // Set interval to update timers every second
+    const interval = setInterval(() => {
+      setTimers(prevTimers => {
+        const newTimers = { ...prevTimers };
+        Object.keys(newTimers).forEach(orderId => {
+          if (newTimers[orderId] > 0) {
+            newTimers[orderId] -= 1;
+          } else {
+            // Move to finished when TTL is 0
+            moveWorkItemToFinished(orderId);
+          }
+        });
+        return newTimers;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [history.inprogress]);
+
+  const moveWorkItemToFinished = async (orderId) => {
+    try {
+      // Move the order to finished column and update its status and verdict
+      const updatedHistory = { ...history };
+      const orderIndex = updatedHistory.inprogress.findIndex(order => order._id === orderId);
+      if (orderIndex !== -1) {
+        const [order] = updatedHistory.inprogress.splice(orderIndex, 1);
+        order.status = 'finished';
+        order.verdict = 3;
+        updatedHistory.finished.push(order);
+        setHistory(updatedHistory);
+
+        // Update on the backend
+        await axios.patch('http://localhost:3000/api/orders/move', {
+          workItemId: orderId,
+          newStatus: 'finished',
+          verdict: 3,
+        });
+      }
+    } catch (error) {
+      console.error("There was an error moving the work item to finished!", error);
+    }
+  };
+
+  const startTTLTimer = (orderId, ttl) => {
+    setTimers(prevTimers => ({
+      ...prevTimers,
+      [orderId]: ttl
+    }));
+  };
+
   const handleGiveSubmit = (e) => {
     e.preventDefault();
     if (error === '') {
       axios.post('http://localhost:3000/api/orders', {
         ...newWork,
         merchantId: userId, // Ensure merchantId is set to the logged-in user's ID
-        fulfillerId: null // Set fulfillerId to null
+        fulfillerId: null, // Set fulfillerId to null
+        ttl: new Date(Date.now() + newWork.ttl * 1000) // Convert TTL to a Date object
       }, {
         headers: { 'x-user-id': userId }
       })
         .then(response => {
           setWork([...work, { ...newWork, verdict: 2 }]); // Add to state with 'verdict' set to 2 (on waitlist)
           setNewWork({
+            ttl: '', // Reset TTL field
             profileId: '',
             merchantOrderId: '',
             merchantSalesChannel: '',
@@ -171,6 +226,7 @@ const WorkCalc = () => {
             testingConfiguration: '',
             fulfillmentGroupId: '',
             fulfillerOrderId: '',
+            fulfillerId: '',
             globalFulfillerId: '',
             shortFulfillmentGroupId: '',
             fulfillmentRequestVersion: 1,
@@ -328,7 +384,10 @@ const WorkCalc = () => {
           movedItem.status = destColumn;
 
           // Update the verdict based on destination column
-          if (destColumn === 'waitlisted') {
+          if (destColumn === 'inprogress') {
+            movedItem.verdict = 1;
+            startTTLTimer(movedItem._id, movedItem.ttl); // Start TTL timer when moved to inprogress
+          } else if (destColumn === 'waitlisted') {
             movedItem.verdict = 2;
           } else if (destColumn === 'finished') {
             movedItem.verdict = 0;
@@ -411,6 +470,13 @@ const WorkCalc = () => {
 
       {tab === 'give' && (
         <form onSubmit={handleGiveSubmit} className="flex flex-col space-y-3 mt-10 items-center">
+          <input
+            type="number"
+            value={newWork.ttl}
+            onChange={e => handleInputChange(e, 'ttl')}
+            placeholder="TTL (seconds)"
+            className="w-full p-2 border border-gray-300"
+          />
           <input value={newWork.profileId} onChange={e => handleInputChange(e, 'profileId')} placeholder="Profile ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantOrderId} onChange={e => handleInputChange(e, 'merchantOrderId')} placeholder="Merchant Order ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantSalesChannel} onChange={e => handleInputChange(e, 'merchantSalesChannel')} placeholder="Merchant Sales Channel" className="w-full p-2 border border-gray-300" />
@@ -564,6 +630,7 @@ const WorkCalc = () => {
                       <p>Name: {workItem.name}</p>
                       <p>Quantity: {workItem.quantity}</p>
                       <p>Verdict: {workItem.verdict}</p>
+                      <p>TTL: {timers[workItem._id] ? timers[workItem._id] + 's' : 'N/A'}</p> {/* Display TTL timer */}
                       <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
                       <p>Merchant ID: {workItem.merchantId}</p>
                       <p>Fulfiller ID: {workItem.fulfillerId}</p>

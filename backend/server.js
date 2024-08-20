@@ -13,6 +13,9 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   useUnifiedTopology: true,
 }).then(() => {
   console.log('Connected to MongoDB');
+
+  // Start background process after connecting to MongoDB
+  setInterval(updateVerdicts, 1000);
 }).catch((err) => {
   console.error('Error connecting to MongoDB', err);
 });
@@ -103,6 +106,26 @@ app.patch('/api/orders/move', (req, res) => {
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
+// Background process to check for TTL expiry and update verdicts
+async function updateVerdicts() {
+  const now = new Date();
+
+  try {
+    // Find orders where TTL is close to expiration (e.g., within the next second)
+    const orders = await orderModel.find({
+      ttl: { $lte: new Date(now.getTime() + 1000) },
+      verdict: { $ne: 3 } // Only update if verdict is not already 3
+    });
+
+    orders.forEach(async (order) => {
+      order.verdict = 3;
+      await order.save();
+    });
+  } catch (err) {
+    console.error('Error updating verdicts:', err);
+  }
+}
+
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {
   const { email, password, username, merchantId, fulfillerId } = req.body;
@@ -173,6 +196,7 @@ app.post('/api/users/:id', (req, res) => {
     });
 });
 
+// Closing bracket for the app.post('/api/users/:id') route handler
 app.listen(3000, () => {
   console.log('Server started on port 3000');
 });

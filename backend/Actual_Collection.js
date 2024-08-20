@@ -192,7 +192,12 @@ const OrderSchema = new mongoose.Schema({
   weight: Number,
   urgency: Number,
   verdict: Number,
-  pallet_fullness: Number
+  pallet_fullness: Number,
+  ttl: {
+    type: Date,
+    default: Date.now,
+    expires: 60 // Set TTL to 60 seconds from the time of creation
+  }
 });
 
 const Order = mongoose.model('Actual_collection', OrderSchema);
