@@ -52,7 +52,6 @@ app.get('/api/orders/history', (req, res) => {
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
-
 // Endpoint to create a new order
 app.post('/api/orders', (req, res) => {
   const { ...restOfBody } = req.body;
@@ -77,8 +76,28 @@ app.patch('/api/orders', (req, res) => {
 
 // Endpoint to move an order to a new status and update the verdict
 app.patch('/api/orders/move', (req, res) => {
-  const { workItemId, newStatus, verdict } = req.body;
+  const { workItemId, newStatus } = req.body;
 
+  // Determine the verdict based on the new status
+  let verdict;
+  switch (newStatus) {
+    case 'accepted':
+      verdict = 0;
+      break;
+    case 'inprogress':
+      verdict = 1;
+      break;
+    case 'waitlisted':
+      verdict = 2;
+      break;
+    case 'finished':
+      verdict = 3;
+      break;
+    default:
+      return res.status(400).json('Invalid status provided.');
+  }
+
+  // Update the order with the new status and verdict
   orderModel.findByIdAndUpdate(workItemId, { status: newStatus, verdict: verdict }, { new: true })
     .then(updatedOrder => res.json(updatedOrder))
     .catch(err => res.status(400).json('Error: ' + err));
