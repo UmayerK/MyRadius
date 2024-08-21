@@ -12,6 +12,7 @@ const WorkCalc = () => {
     waitlisted: [],
     finished: []
   });
+  const { isLoggedIn, userId, isAdmin } = useAuth(); // Get isAdmin from context
   const [timers, setTimers] = useState({});
   const [newWork, setNewWork] = useState({
     ttl: '', // Add TTL field
@@ -86,7 +87,6 @@ const WorkCalc = () => {
   const [paletteCount, setPaletteCount] = useState(0);
   const [error, setError] = useState('');
   const [expandedIndex, setExpandedIndex] = useState(null); // Track expanded order
-  const { isLoggedIn, userId } = useAuth(); // Get login status and userId from context
   const [selectedWorkIds, setSelectedWorkIds] = useState([]);
 
   useEffect(() => {
@@ -361,6 +361,8 @@ const WorkCalc = () => {
   };
 
   const moveWorkItem = (workItemId, direction) => {
+    if (isAdmin) return; // Admin cannot move work items
+
     setHistory((prevHistory) => {
       const columns = ['accepted', 'inprogress', 'waitlisted', 'finished']; // Updated columns with inprogress
       const newHistory = { ...prevHistory };
@@ -420,7 +422,7 @@ const WorkCalc = () => {
   const handleDragEnd = (result) => {
     const { source, destination } = result;
 
-    if (!destination) return;
+    if (!destination || isAdmin) return; // Admin cannot drag work items
 
     if (source.droppableId !== destination.droppableId) {
       const sourceItems = Array.from(history[source.droppableId]);
@@ -552,146 +554,151 @@ const WorkCalc = () => {
         </form>
       )}
 
-{tab === 'accept' && (
-  <div className="flex flex-col space-y-3 mt-10 items-center text-white">
-    {isLoggedIn ? (
-      work.map((workItem, index) => (
-        <div key={index} className="w-full p-2 border border-gray-300 bg-gray-800 rounded-lg"> {/* Added bg-gray-800 and rounded-lg */}
-          <p>Name: {workItem.name}</p>
-          <p>Quantity: {workItem.quantity}</p>
-          <p>Verdict: {workItem.verdict}</p>
-          <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
-          {expandedIndex === index && (
-            <>
-              <p>Merchant ID: {workItem.merchantId}</p>
-              <p>Fulfiller ID: {workItem.fulfillerId}</p>
-              <p>Profile ID: {workItem.profileId}</p>
-              <p>Merchant Order ID: {workItem.merchantOrderId}</p>
-              <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
-              <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
-              <p>Language ID: {workItem.languageId}</p>
-              <p>Placed By: {workItem.placedBy}</p>
-              <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
-              <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
-              <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
-              <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
-              <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-              <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
-              <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
-              <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
-              <p>Shipping Priority: {workItem.shippingPriority}</p>
-              <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
-              <p>Merchant Product Name: {workItem.merchantProductName}</p>
-              <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
-              <p>Price: {workItem.price}</p>
-              <p>Weight: {workItem.weight}</p>
-              <p>Urgency: {workItem.urgency}</p>
-              <p>Status: {workItem.status}</p>
-              <p>Pallet Fullness: {workItem.pallet_fullness}</p>
-            </>
+      {tab === 'accept' && (
+        <div className="flex flex-col space-y-3 mt-10 items-center text-white">
+          {isLoggedIn ? (
+            work.map((workItem, index) => (
+              <div key={index} className="w-full p-2 border border-gray-300 bg-gray-800 rounded-lg"> {/* Added bg-gray-800 and rounded-lg */}
+                <p>Name: {workItem.name}</p>
+                <p>Quantity: {workItem.quantity}</p>
+                <p>Verdict: {workItem.verdict}</p>
+                <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
+                {expandedIndex === index && (
+                  <>
+                    <p>Merchant ID: {workItem.merchantId}</p>
+                    <p>Fulfiller ID: {workItem.fulfillerId}</p>
+                    <p>Profile ID: {workItem.profileId}</p>
+                    <p>Merchant Order ID: {workItem.merchantOrderId}</p>
+                    <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
+                    <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
+                    <p>Language ID: {workItem.languageId}</p>
+                    <p>Placed By: {workItem.placedBy}</p>
+                    <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
+                    <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
+                    <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
+                    <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
+                    <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
+                    <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
+                    <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
+                    <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
+                    <p>Shipping Priority: {workItem.shippingPriority}</p>
+                    <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
+                    <p>Merchant Product Name: {workItem.merchantProductName}</p>
+                    <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
+                    <p>Price: {workItem.price}</p>
+                    <p>Weight: {workItem.weight}</p>
+                    <p>Urgency: {workItem.urgency}</p>
+                    <p>Status: {workItem.status}</p>
+                    <p>Pallet Fullness: {workItem.pallet_fullness}</p>
+                  </>
+                )}
+                <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAcceptSubmit(index)} className={`text-white font-bold py-2 px-4 ${selectedWorkIds.includes(workItem._id) ? 'bg-green-700' : 'bg-green-500'}`}>{selectedWorkIds.includes(workItem._id) ? 'Undo' : 'Complete'}</button>
+                  <button onClick={() => handleRejectSubmit(index)} className="text-white font-bold py-2 px-4 bg-red-500">Reject</button>
+                  <button onClick={() => handleWaitlistSubmit(index)} className="text-white font-bold py-2 px-4 bg-gray-500">Waitlist</button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>Please log in to view and accept work.</p>
           )}
-          <button onClick={() => toggleExpand(index)} className="text-blue-500">{expandedIndex === index ? 'See Less' : 'See More'}</button>
-          <div className="flex space-x-2">
-            <button onClick={() => handleAcceptSubmit(index)} className={`text-white font-bold py-2 px-4 ${selectedWorkIds.includes(workItem._id) ? 'bg-green-700' : 'bg-green-500'}`}>{selectedWorkIds.includes(workItem._id) ? 'Undo' : 'Complete'}</button>
-            <button onClick={() => handleRejectSubmit(index)} className="text-white font-bold py-2 px-4 bg-red-500">Reject</button>
-            <button onClick={() => handleWaitlistSubmit(index)} className="text-white font-bold py-2 px-4 bg-gray-500">Waitlist</button>
-          </div>
+          <button onClick={handleSubmitAcceptedWork} className="text-white font-bold py-2 px-4 bg-blue-500 mt-4">Submit</button>
         </div>
-      ))
-    ) : (
-      <p>Please log in to view and accept work.</p>
-    )}
-    <button onClick={handleSubmitAcceptedWork} className="text-white font-bold py-2 px-4 bg-blue-500 mt-4">Submit</button>
-  </div>
-)}
+      )}
 
-
-{tab === 'history' && (
-  <DragDropContext onDragEnd={handleDragEnd}>
-    <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
-      {['accepted', 'inprogress', 'waitlisted', 'finished'].map((columnId) => ( // Added 'inprogress' here
-        <Droppable key={columnId} droppableId={columnId}>
-          {(provided) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="w-1/4 p-4 bg-gray-800 border border-gray-700 rounded-lg"
-            >
-              <h2 className="text-lg font-bold capitalize">{columnId}</h2>
-              {history[columnId].map((workItem, index) => (
-                <Draggable key={workItem._id} draggableId={workItem._id} index={index}>
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className="p-4 mb-4 bg-gray-700 rounded-lg"
-                    >
-                      <p>Name: {workItem.name}</p>
-                      <p>Quantity: {workItem.quantity}</p>
-                      <p>Verdict: {workItem.verdict}</p>
-                      <p>TTL: {timers[workItem._id] ? timers[workItem._id] + 's' : 'N/A'}</p> {/* Display TTL timer */}
-                      <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
-                      <p>Merchant ID: {workItem.merchantId}</p>
-                      <p>Fulfiller ID: {workItem.fulfillerId}</p>
-                      {expandedIndex === index && (
-                        <>
-                          <p>Profile ID: {workItem.profileId}</p>
-                          <p>Merchant Order ID: {workItem.merchantOrderId}</p>
-                          <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
-                          <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
-                          <p>Language ID: {workItem.languageId}</p>
-                          <p>Placed By: {workItem.placedBy}</p>
-                          <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
-                          <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
-                          <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
-                          <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
-                          <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
-                          <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
-                          <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
-                          <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
-                          <p>Shipping Priority: {workItem.shippingPriority}</p>
-                          <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
-                          <p>Merchant Product Name: {workItem.merchantProductName}</p>
-                          <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
-                          <p>Price: {workItem.price}</p>
-                          <p>Weight: {workItem.weight}</p>
-                          <p>Urgency: {workItem.urgency}</p>
-                          <p>Status: {workItem.status}</p>
-                          <p>Pallet Fullness: {workItem.pallet_fullness}</p>
-                        </>
-                      )}
-                      <button onClick={() => toggleExpand(index)} className="text-blue-500">
-                        {expandedIndex === index ? 'See Less' : 'See More'}
-                      </button>
-                      <div className="flex justify-between mt-2">
-                        <button
-                          onClick={() => moveWorkItem(workItem._id, 'left')}
-                          className="text-white font-bold py-1 px-2 bg-blue-500"
-                          disabled={columnId === 'accepted'} // Disable left arrow for the first column
-                        >
-                          &larr;
-                        </button>
-                        <button
-                          onClick={() => moveWorkItem(workItem._id, 'right')}
-                          className="text-white font-bold py-1 px-2 bg-blue-500"
-                          disabled={columnId === 'finished'} // Disable right arrow for the last column
-                        >
-                          &rarr;
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      ))}
-    </div>
-  </DragDropContext>
-)}
+      {tab === 'history' && (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex flex-row space-x-4 mt-10 items-start w-full text-white">
+            {['accepted', 'inprogress', 'waitlisted', 'finished'].map((columnId) => ( // Added 'inprogress' here
+              <Droppable key={columnId} droppableId={columnId}>
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="w-1/4 p-4 bg-gray-800 border border-gray-700 rounded-lg"
+                  >
+                    <h2 className="text-lg font-bold capitalize">{columnId}</h2>
+                    {history[columnId].map((workItem, index) => (
+                      <Draggable key={workItem._id} draggableId={workItem._id} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="p-4 mb-4 bg-gray-700 rounded-lg"
+                          >
+                            <div className="flex justify-between">
+                              <div>
+                                <p>Name: {workItem.name}</p>
+                                <p>Quantity: {workItem.quantity}</p>
+                                <p>Verdict: {workItem.verdict}</p>
+                              </div>
+                              <div className="text-right">
+                                <p>TTL: {timers[workItem._id] ? timers[workItem._id] + 's' : 'N/A'}</p> {/* Display TTL timer */}
+                              </div>
+                            </div>
+                            <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
+                            <p>Merchant ID: {workItem.merchantId}</p>
+                            <p>Fulfiller ID: {workItem.fulfillerId}</p>
+                            {expandedIndex === index && (
+                              <>
+                                <p>Profile ID: {workItem.profileId}</p>
+                                <p>Merchant Order ID: {workItem.merchantOrderId}</p>
+                                <p>Merchant Sales Channel: {workItem.merchantSalesChannel}</p>
+                                <p>Merchant Customer ID: {workItem.merchantCustomerId}</p>
+                                <p>Language ID: {workItem.languageId}</p>
+                                <p>Placed By: {workItem.placedBy}</p>
+                                <p>Merchant Placed Date: {new Date(workItem.merchantPlacedDate).toLocaleString()}</p>
+                                <p>Created Date: {new Date(workItem.createdDate).toLocaleString()}</p>
+                                <p>Fake Order: {workItem.fakeOrder ? 'Yes' : 'No'}</p>
+                                <p>Fulfillment Group ID: {workItem.fulfillmentGroupId}</p>
+                                <p>Fulfiller Order ID: {workItem.fulfillerOrderId}</p>
+                                <p>Global Fulfiller ID: {workItem.globalFulfillerId}</p>
+                                <p>Short Fulfillment Group ID: {workItem.shortFulfillmentGroupId}</p>
+                                <p>Fulfillment Request Version: {workItem.fulfillmentRequestVersion}</p>
+                                <p>Shipping Priority: {workItem.shippingPriority}</p>
+                                <p>Ordered SKU Code: {workItem.orderedSkuCode}</p>
+                                <p>Merchant Product Name: {workItem.merchantProductName}</p>
+                                <p>Document Reference URL: {workItem.documentReferenceUrl}</p>
+                                <p>Price: {workItem.price}</p>
+                                <p>Weight: {workItem.weight}</p>
+                                <p>Urgency: {workItem.urgency}</p>
+                                <p>Status: {workItem.status}</p>
+                                <p>Pallet Fullness: {workItem.pallet_fullness}</p>
+                              </>
+                            )}
+                            <button onClick={() => toggleExpand(index)} className="text-blue-500">
+                              {expandedIndex === index ? 'See Less' : 'See More'}
+                            </button>
+                            <div className="flex justify-between mt-2">
+                              <button
+                                onClick={() => moveWorkItem(workItem._id, 'left')}
+                                className="text-white font-bold py-1 px-2 bg-blue-500"
+                                disabled={columnId === 'accepted'} // Disable left arrow for the first column
+                              >
+                                &larr;
+                              </button>
+                              <button
+                                onClick={() => moveWorkItem(workItem._id, 'right')}
+                                className="text-white font-bold py-1 px-2 bg-blue-500"
+                                disabled={columnId === 'finished'} // Disable right arrow for the last column
+                              >
+                                &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            ))}
+          </div>
+        </DragDropContext>
+      )}
 
     </div>
   );

@@ -20,7 +20,7 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   console.error('Error connecting to MongoDB', err);
 });
 
-// Middleware to authenticate requests and attach merchantId and userId
+// Middleware to authenticate requests and attach merchantId, userId, and admin status
 app.use(async (req, res, next) => {
   const userId = req.headers['x-user-id']; // Assuming userId is sent in the request headers
   req.userId = userId;
@@ -30,28 +30,31 @@ app.use(async (req, res, next) => {
       const user = await userModel.findById(userId);
       if (user) {
         req.merchantId = user.merchantId; // Attach merchantId to the request
+        req.isAdmin = user.email === 'admin@admin.com'; // Determine if the user is an admin
+        console.log(`User logged in: ${user.email}, isAdmin: ${req.isAdmin}`);
       } else {
         return res.status(400).json('User not found.');
       }
     } catch (err) {
+      console.error('Error fetching user information:', err);
       return res.status(500).json('Error fetching user information.');
     }
+  } else {
+    console.log('No userId in headers');
   }
 
   next();
 });
 
-// Endpoint to get all orders with fulfillerId set to null (Accept Work Tab)
-app.get('/api/orders', (req, res) => {
-  orderModel.find({ fulfillerId: null })
-    .then(orders => res.json(orders))
-    .catch(err => res.status(400).json('Error: ' + err));
-});
-
-// Endpoint to get orders where fulfillerId matches the logged-in user (History Tab)
+// Update the endpoint to get orders based on admin status
 app.get('/api/orders/history', (req, res) => {
-  orderModel.find({ merchantId: req.merchantId })  // Fetch based on merchantId
-    .then(orders => res.json(orders))
+  const query = req.isAdmin ? {} : { merchantId: req.merchantId };  // Fetch all orders if admin, else filter by merchantId
+  console.log(`Fetching orders with query:`, query);
+  orderModel.find(query)
+    .then(orders => {
+      console.log(`Orders fetched: ${orders.length}`);
+      res.json(orders);
+    })
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
@@ -196,7 +199,6 @@ app.post('/api/users/:id', (req, res) => {
     });
 });
 
-// Closing bracket for the app.post('/api/users/:id') route handler
 app.listen(3000, () => {
   console.log('Server started on port 3000');
 });
