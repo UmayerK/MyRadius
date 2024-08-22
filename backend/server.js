@@ -13,14 +13,11 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   useUnifiedTopology: true,
 }).then(() => {
   console.log('Connected to MongoDB');
-
-  // Start background process after connecting to MongoDB
-  setInterval(updateVerdicts, 1000);
 }).catch((err) => {
   console.error('Error connecting to MongoDB', err);
 });
 
-// Middleware to authenticate requests and attach merchantId, userId, and admin status
+// Middleware to authenticate requests and attach merchantId and userId
 app.use(async (req, res, next) => {
   const userId = req.headers['x-user-id']; // Assuming userId is sent in the request headers
   req.userId = userId;
@@ -30,31 +27,28 @@ app.use(async (req, res, next) => {
       const user = await userModel.findById(userId);
       if (user) {
         req.merchantId = user.merchantId; // Attach merchantId to the request
-        req.isAdmin = user.email === 'admin@admin.com'; // Determine if the user is an admin
-        console.log(`User logged in: ${user.email}, isAdmin: ${req.isAdmin}`);
       } else {
         return res.status(400).json('User not found.');
       }
     } catch (err) {
-      console.error('Error fetching user information:', err);
       return res.status(500).json('Error fetching user information.');
     }
-  } else {
-    console.log('No userId in headers');
   }
 
   next();
 });
 
-// Update the endpoint to get orders based on admin status
+// Endpoint to get all orders with fulfillerId set to null (Accept Work Tab)
+app.get('/api/orders', (req, res) => {
+  orderModel.find({ fulfillerId: null })
+    .then(orders => res.json(orders))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to get orders where fulfillerId matches the logged-in user (History Tab)
 app.get('/api/orders/history', (req, res) => {
-  const query = req.isAdmin ? {} : { merchantId: req.merchantId };  // Fetch all orders if admin, else filter by merchantId
-  console.log(`Fetching orders with query:`, query);
-  orderModel.find(query)
-    .then(orders => {
-      console.log(`Orders fetched: ${orders.length}`);
-      res.json(orders);
-    })
+  orderModel.find({ fulfillerId: req.userId })
+    .then(orders => res.json(orders))
     .catch(err => res.status(400).json('Error: ' + err));
 });
 
@@ -64,7 +58,9 @@ app.post('/api/orders', (req, res) => {
   const newOrder = new orderModel({
     ...restOfBody,
     merchantId: req.merchantId, // Associate with logged-in user's merchantId
-    fulfillerId: null // Set fulfillerId to null
+    fulfillerId: null, // Set fulfillerId to null
+    verdict: 0, // Set the initial verdict to 0 when the order is created
+    status: 'accepted', // Set the initial status to 'accepted'
   });
   
   newOrder.save()
@@ -81,53 +77,44 @@ app.patch('/api/orders', (req, res) => {
 });
 
 // Endpoint to move an order to a new status and update the verdict
-app.patch('/api/orders/move', (req, res) => {
+app.patch('/api/orders/move', async (req, res) => {
   const { workItemId, newStatus } = req.body;
 
-  // Determine the verdict based on the new status
-  let verdict;
-  switch (newStatus) {
-    case 'accepted':
-      verdict = 0;
-      break;
-    case 'inprogress':
-      verdict = 1;
-      break;
-    case 'waitlisted':
-      verdict = 2;
-      break;
-    case 'finished':
-      verdict = 3;
-      break;
-    default:
-      return res.status(400).json('Invalid status provided.');
-  }
-
-  // Update the order with the new status and verdict
-  orderModel.findByIdAndUpdate(workItemId, { status: newStatus, verdict: verdict }, { new: true })
-    .then(updatedOrder => res.json(updatedOrder))
-    .catch(err => res.status(400).json('Error: ' + err));
-});
-
-// Background process to check for TTL expiry and update verdicts
-async function updateVerdicts() {
-  const now = new Date();
-
   try {
-    // Find orders where TTL is close to expiration (e.g., within the next second)
-    const orders = await orderModel.find({
-      ttl: { $lte: new Date(now.getTime() + 1000) },
-      verdict: { $ne: 3 } // Only update if verdict is not already 3
-    });
+    const order = await orderModel.findById(workItemId);
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
 
-    orders.forEach(async (order) => {
-      order.verdict = 3;
-      await order.save();
-    });
+    order.status = newStatus;
+
+    // Set verdict based on new status
+    switch (newStatus) {
+      case 'accepted':
+        order.verdict = 0;
+        break;
+      case 'inprogress':
+        order.verdict = 1;
+        order.startTTLCountdown(); // Start the TTL countdown when moving to 'inprogress'
+        break;
+      case 'waitlisted':
+        order.verdict = 2;
+        break;
+      case 'finished':
+        order.verdict = 3;
+        break;
+      default:
+        return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    await order.save(); // Save the order after updating status and verdict
+
+    res.json(order);
   } catch (err) {
-    console.error('Error updating verdicts:', err);
+    res.status(400).json('Error: ' + err);
   }
-}
+});
 
 // Endpoint to register a new user
 app.post('/api/register', (req, res) => {

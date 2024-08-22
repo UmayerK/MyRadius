@@ -179,8 +179,20 @@ const OrderSchema = new mongoose.Schema({
   unmetExpectations: [mongoose.Schema.Types.Mixed],
   fulfillmentCapabilities: [mongoose.Schema.Types.Mixed],
   status: {
-    attributes: mongoose.Schema.Types.Mixed,
-    additionalData: mongoose.Schema.Types.Mixed
+    type: String, // Changed to String
+    enum: ['accepted', 'inprogress', 'waitlisted', 'finished'], // Optional: Enum to validate status values
+  },
+  ttl: {
+    type: Number,
+    min: 0,
+    max: 60,
+    default: 60,
+    validate: {
+      validator: function (v) {
+        return v <= 60;
+      },
+      message: props => `${props.value} exceeds the maximum allowed TTL of 60 seconds.`
+    }
   },
   _links: mongoose.Schema.Types.Mixed,
   _embedded: mongoose.Schema.Types.Mixed,
@@ -192,13 +204,27 @@ const OrderSchema = new mongoose.Schema({
   weight: Number,
   urgency: Number,
   verdict: Number,
-  pallet_fullness: Number,
-  ttl: {
-    type: Date,
-    default: Date.now,
-    expires: 60 // Set TTL to 60 seconds from the time of creation
-  }
+  pallet_fullness: Number
 });
+
+// Method to start TTL countdown
+OrderSchema.methods.startTTLCountdown = function () {
+  const order = this;
+  if (order.ttl > 0) {
+    const intervalId = setInterval(async function () {
+      if (order.ttl > 0) {
+        order.ttl -= 1;
+        await order.save();
+        console.log(`Order ${order._id}: TTL is now ${order.ttl} seconds.`);
+      } else {
+        clearInterval(intervalId);
+        order.ttl = 0;
+        console.log(`Order ${order._id}: TTL reached 0.`);
+        // Optionally, trigger an event or move order to 'finished' status
+      }
+    }, 1000); // Decrease ttl every second
+  }
+};
 
 const Order = mongoose.model('Actual_collection', OrderSchema);
 
