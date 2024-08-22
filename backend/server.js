@@ -54,9 +54,10 @@ app.get('/api/orders/history', (req, res) => {
 
 // Endpoint to create a new order
 app.post('/api/orders', (req, res) => {
-  const { ...restOfBody } = req.body;
+  const { ttl, ...restOfBody } = req.body; // Get TTL from the request body
   const newOrder = new orderModel({
     ...restOfBody,
+    ttl, // Set TTL from the form input
     merchantId: req.merchantId, // Associate with logged-in user's merchantId
     fulfillerId: null, // Set fulfillerId to null
     verdict: 0, // Set the initial verdict to 0 when the order is created

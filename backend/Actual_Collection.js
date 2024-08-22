@@ -179,8 +179,13 @@ const OrderSchema = new mongoose.Schema({
   unmetExpectations: [mongoose.Schema.Types.Mixed],
   fulfillmentCapabilities: [mongoose.Schema.Types.Mixed],
   status: {
-    type: String, // Changed to String
-    enum: ['accepted', 'inprogress', 'waitlisted', 'finished'], // Optional: Enum to validate status values
+    type: String, // String type for status
+    enum: ['accepted', 'inprogress', 'waitlisted', 'finished'],
+    default: 'accepted' // Default status is 'accepted'
+  },
+  verdict: {
+    type: Number,
+    default: 0, // Set the default verdict to 0
   },
   ttl: {
     type: Number,
@@ -203,11 +208,10 @@ const OrderSchema = new mongoose.Schema({
   price: Number,
   weight: Number,
   urgency: Number,
-  verdict: Number,
   pallet_fullness: Number
 });
 
-// Method to start TTL countdown
+// Method to start TTL countdown and move to 'finished' status when TTL reaches 0
 OrderSchema.methods.startTTLCountdown = function () {
   const order = this;
   if (order.ttl > 0) {
@@ -219,8 +223,9 @@ OrderSchema.methods.startTTLCountdown = function () {
       } else {
         clearInterval(intervalId);
         order.ttl = 0;
-        console.log(`Order ${order._id}: TTL reached 0.`);
-        // Optionally, trigger an event or move order to 'finished' status
+        order.status = 'finished';
+        await order.save();
+        console.log(`Order ${order._id} has been moved to 'finished' status.`);
       }
     }, 1000); // Decrease ttl every second
   }

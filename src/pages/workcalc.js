@@ -77,7 +77,8 @@ const WorkCalc = () => {
     urgency: '',
     status: 'Pending',
     verdict: 2,
-    pallet_fullness: 0
+    pallet_fullness: 0,
+    ttl: 60, // Add TTL with a default value of 60 seconds
   });
   const [paletteSize, setPaletteSize] = useState(1);
   const [priceIncrement, setPriceIncrement] = useState(1);
@@ -222,7 +223,8 @@ const WorkCalc = () => {
             urgency: '',
             status: 'Pending',
             verdict: 2,
-            pallet_fullness: 0
+            pallet_fullness: 0,
+            ttl: 60, // Reset TTL to default 60 seconds
           });
           setPaletteCount(prevCount => prevCount + 1);
           setTab('accept'); // Switch to accept tab after submission
@@ -411,6 +413,16 @@ const WorkCalc = () => {
 
       {tab === 'give' && (
         <form onSubmit={handleGiveSubmit} className="flex flex-col space-y-3 mt-10 items-center">
+          <input
+            type="number"
+            value={newWork.ttl}
+            onChange={e => handleInputChange(e, 'ttl')}
+            placeholder="TTL (in seconds)"
+            className="w-full p-2 border border-gray-300"
+            min="1"
+            max="60"
+            required
+          />
           <input value={newWork.profileId} onChange={e => handleInputChange(e, 'profileId')} placeholder="Profile ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantOrderId} onChange={e => handleInputChange(e, 'merchantOrderId')} placeholder="Merchant Order ID" className="w-full p-2 border border-gray-300" />
           <input value={newWork.merchantSalesChannel} onChange={e => handleInputChange(e, 'merchantSalesChannel')} placeholder="Merchant Sales Channel" className="w-full p-2 border border-gray-300" />
@@ -567,6 +579,7 @@ const WorkCalc = () => {
                       <p>Address: {workItem.destinationAddress.street1}, {workItem.destinationAddress.city}, {workItem.destinationAddress.stateOrProvince}, {workItem.destinationAddress.postalCode}</p>
                       <p>Merchant ID: {workItem.merchantId}</p>
                       <p>Fulfiller ID: {workItem.fulfillerId}</p>
+                      <p>TTL: {workItem.ttl} seconds</p>
                       {expandedIndex === index && (
                         <>
                           <p>Profile ID: {workItem.profileId}</p>
