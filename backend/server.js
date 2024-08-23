@@ -17,7 +17,7 @@ mongoose.connect('mongodb+srv://umayer:umayer@cluster0.cs4vu4j.mongodb.net/NEW_D
   console.error('Error connecting to MongoDB', err);
 });
 
-// Middleware to authenticate requests and attach merchantId and userId
+// Middleware to authenticate requests and attach merchantId, fulfillerId, and admin status
 app.use(async (req, res, next) => {
   const userId = req.headers['x-user-id']; // Assuming userId is sent in the request headers
   req.userId = userId;
@@ -27,6 +27,8 @@ app.use(async (req, res, next) => {
       const user = await userModel.findById(userId);
       if (user) {
         req.merchantId = user.merchantId; // Attach merchantId to the request
+        req.fulfillerId = user.fulfillerId; // Attach fulfillerId to the request
+        req.isAdmin = user.merchantId === '0' && user.fulfillerId === '0'; // Determine if the user is an admin
       } else {
         return res.status(400).json('User not found.');
       }
@@ -40,16 +42,28 @@ app.use(async (req, res, next) => {
 
 // Endpoint to get all orders with fulfillerId set to null (Accept Work Tab)
 app.get('/api/orders', (req, res) => {
-  orderModel.find({ fulfillerId: null })
-    .then(orders => res.json(orders))
-    .catch(err => res.status(400).json('Error: ' + err));
+  if (req.isAdmin) {
+    orderModel.find({ fulfillerId: { $ne: null } }) // Admin sees only orders that are accepted (i.e., in someone's backlog)
+      .then(orders => res.json(orders))
+      .catch(err => res.status(400).json('Error: ' + err));
+  } else {
+    orderModel.find({ fulfillerId: null })
+      .then(orders => res.json(orders))
+      .catch(err => res.status(400).json('Error: ' + err));
+  }
 });
 
 // Endpoint to get orders where fulfillerId matches the logged-in user (History Tab)
 app.get('/api/orders/history', (req, res) => {
-  orderModel.find({ fulfillerId: req.userId })
-    .then(orders => res.json(orders))
-    .catch(err => res.status(400).json('Error: ' + err));
+  if (req.isAdmin) {
+    orderModel.find({ fulfillerId: { $ne: null } }) // Admin sees only orders that are accepted (i.e., in someone's backlog)
+      .then(orders => res.json(orders))
+      .catch(err => res.status(400).json('Error: ' + err));
+  } else {
+    orderModel.find({ fulfillerId: req.userId })
+      .then(orders => res.json(orders))
+      .catch(err => res.status(400).json('Error: ' + err));
+  }
 });
 
 // Endpoint to create a new order
@@ -71,6 +85,10 @@ app.post('/api/orders', (req, res) => {
 
 // Endpoint to update fulfillerId for selected orders
 app.patch('/api/orders', (req, res) => {
+  if (req.isAdmin) {
+    return res.status(403).json('Admins cannot modify orders.');
+  }
+
   const { ids, fulfillerId } = req.body;
   orderModel.updateMany({ _id: { $in: ids } }, { $set: { fulfillerId } })
     .then(() => res.json('Orders updated!'))
@@ -79,6 +97,10 @@ app.patch('/api/orders', (req, res) => {
 
 // Endpoint to move an order to a new status and update the verdict
 app.patch('/api/orders/move', async (req, res) => {
+  if (req.isAdmin) {
+    return res.status(403).json('Admins cannot move orders.');
+  }
+
   const { workItemId, newStatus } = req.body;
 
   try {
@@ -115,6 +137,31 @@ app.patch('/api/orders/move', async (req, res) => {
   } catch (err) {
     res.status(400).json('Error: ' + err);
   }
+});
+
+// Endpoint to get all registered emails
+app.get('/api/users/emails', (req, res) => {
+  userModel.find({}, 'email') // Fetch only the 'email' field from all users
+    .then(users => {
+      const emails = users.map(user => user.email);
+      res.json(emails);
+    })
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to get orders by email (in backlog)
+app.get('/api/orders/by-email', (req, res) => {
+  const { email } = req.query;
+  orderModel.find({ fulfillerId: { $ne: null }, 'supportContact.email': email })
+    .then(orders => res.json(orders))
+    .catch(err => res.status(400).json('Error: ' + err));
+});
+
+// Endpoint to get all orders for admin view
+app.get('/api/admin/orders/all', (req, res) => {
+  orderModel.find({ fulfillerId: { $ne: null } }) // Admin sees only orders that are accepted (i.e., in someone's backlog)
+    .then(orders => res.json(orders))
+    .catch(err => res.status(400).json('Error: ' + err));
 });
 
 // Endpoint to register a new user
